@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { DetailDocument } from '@/features/detail/DetailDocument'
 import { computeTotals } from '@/lib/calc'
@@ -8,18 +8,33 @@ import { decodeShare } from '@/lib/share'
 // del link (sin backend). No tiene chrome de la app (es para el cliente final).
 export function SharedBudgetPage() {
   const { hash } = useLocation()
+  // 'loading' | 'error' | { presupuesto, local }
+  const [state, setState] = useState('loading')
 
-  const data = useMemo(() => {
+  useEffect(() => {
     const token = hash.replace(/^#/, '')
-    if (!token) return null
-    try {
-      return decodeShare(token)
-    } catch {
-      return null
+    if (!token) {
+      setState('error')
+      return
+    }
+    let alive = true
+    decodeShare(token)
+      .then((d) => alive && setState(d))
+      .catch(() => alive && setState('error'))
+    return () => {
+      alive = false
     }
   }, [hash])
 
-  if (!data) {
+  if (state === 'loading') {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-zinc-400">
+        Cargando presupuesto…
+      </div>
+    )
+  }
+
+  if (state === 'error') {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center text-sm text-zinc-500">
         Link inválido o incompleto. Pedí al taller que te lo reenvíe.
@@ -27,7 +42,7 @@ export function SharedBudgetPage() {
     )
   }
 
-  const { presupuesto, local } = data
+  const { presupuesto, local } = state
   const totals = computeTotals(presupuesto)
 
   return (
