@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Copy, Download, Loader2, MessageCircle, Pencil } from 'lucide-react'
+import { ArrowLeft, Copy, Download, Link2, Loader2, MessageCircle, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useStore } from '@/store/useStore'
 import { DetailDocument } from '@/features/detail/DetailDocument'
 import { computeTotals } from '@/lib/calc'
 import { buildWhatsappLink } from '@/lib/whatsapp'
+import { buildShareUrl } from '@/lib/share'
 import { formatARS, formatNro } from '@/lib/format'
 
 export function BudgetDetailPage() {
@@ -50,6 +51,17 @@ export function BudgetDetailPage() {
     }
   }
 
+  const handleCopyLink = async () => {
+    try {
+      const url = buildShareUrl(presupuesto, local)
+      await navigator.clipboard.writeText(url)
+      toast.success('Link copiado')
+    } catch (e) {
+      toast.error('No se pudo copiar el link')
+      console.error(e)
+    }
+  }
+
   const handleWhatsapp = () => {
     const link = buildWhatsappLink({ ...presupuesto, __totalARS: totals.total }, local)
     window.open(link, '_blank')
@@ -78,8 +90,17 @@ export function BudgetDetailPage() {
         </Button>
       </div>
 
-      {/* Documento cliente (lo que se exporta a PDF) */}
+      {/* Documento cliente (vista en pantalla) */}
       <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+        <DetailDocument presupuesto={presupuesto} local={local} totals={totals} />
+      </div>
+
+      {/* Template de PDF: render fijo a 760px fuera de pantalla. Es lo único que se
+          captura, así el PDF sale igual en celu y en compu (no depende del viewport). */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-[9999px] top-0 w-[760px] bg-white"
+      >
         <DetailDocument
           presupuesto={presupuesto}
           local={local}
@@ -136,6 +157,10 @@ export function BudgetDetailPage() {
               <Download className="size-4" />
             )}
             PDF
+          </Button>
+          <Button className="flex-1" variant="outline" onClick={handleCopyLink} id="btn-link">
+            <Link2 className="size-4" />
+            Link
           </Button>
           <Button
             className="flex-1 bg-[#25D366] text-white hover:bg-[#1ebe5b]"
