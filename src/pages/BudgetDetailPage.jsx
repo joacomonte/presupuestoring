@@ -7,7 +7,7 @@ import { useStore } from '@/store/useStore'
 import { DetailDocument } from '@/features/detail/DetailDocument'
 import { computeTotals } from '@/lib/calc'
 import { buildWhatsappLink } from '@/lib/whatsapp'
-import { buildShareUrl } from '@/lib/share'
+import { buildShareUrl, shortenUrl } from '@/lib/share'
 import { formatARS, formatNro } from '@/lib/format'
 
 export function BudgetDetailPage() {
@@ -21,6 +21,7 @@ export function BudgetDetailPage() {
   const presupuesto = getBudget(id)
   const docRef = useRef(null)
   const [pdfLoading, setPdfLoading] = useState(false)
+  const [linkLoading, setLinkLoading] = useState(false)
 
   useEffect(() => {
     if (!presupuesto) {
@@ -52,13 +53,26 @@ export function BudgetDetailPage() {
   }
 
   const handleCopyLink = async () => {
+    setLinkLoading(true)
+    // El link corto se genera con un fetch (spoo.me). En iOS, await + writeText
+    // pierde el gesto del click; ClipboardItem con promesa copia cuando resuelve.
+    const textPromise = buildShareUrl(presupuesto, local).then(shortenUrl)
     try {
-      const url = buildShareUrl(presupuesto, local)
-      await navigator.clipboard.writeText(url)
+      if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': textPromise.then((t) => new Blob([t], { type: 'text/plain' })),
+          }),
+        ])
+      } else {
+        await navigator.clipboard.writeText(await textPromise)
+      }
       toast.success('Link copiado')
     } catch (e) {
       toast.error('No se pudo copiar el link')
       console.error(e)
+    } finally {
+      setLinkLoading(false)
     }
   }
 
@@ -158,8 +172,14 @@ export function BudgetDetailPage() {
             )}
             PDF
           </Button>
-          <Button className="flex-1" variant="outline" onClick={handleCopyLink} id="btn-link">
-            <Link2 className="size-4" />
+          <Button
+            className="flex-1"
+            variant="outline"
+            onClick={handleCopyLink}
+            disabled={linkLoading}
+            id="btn-link"
+          >
+            {linkLoading ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
             Link
           </Button>
           <Button

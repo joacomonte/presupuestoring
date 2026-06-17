@@ -97,3 +97,20 @@ export async function decodeShare(token) {
 export async function buildShareUrl(presupuesto, local) {
   return `${window.location.origin}/ver#${await encodeShare(presupuesto, local)}`
 }
+
+// Acorta el link con spoo.me (free, sin API key, soporta CORS y preserva el #hash).
+// Si falla (red, rate limit), devuelve el link largo como fallback.
+export async function shortenUrl(longUrl) {
+  try {
+    const res = await fetch('https://spoo.me/', {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ url: longUrl }),
+    })
+    if (!res.ok) return longUrl
+    const data = await res.json()
+    return data.short_url ? data.short_url.replace(/^http:/, 'https:') : longUrl
+  } catch {
+    return longUrl
+  }
+}
