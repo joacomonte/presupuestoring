@@ -1,13 +1,8 @@
-// Link compartible autocontenido (sin backend): el presupuesto viaja codificado
-// dentro del propio link, en el #hash (nunca se manda al server). El que lo recibe
-// lo abre en /ver y se renderiza con el mismo template del detalle.
-//
-// Se comprime con gzip (CompressionStream) para que la URL no sea enorme — el JSON
-// es muy repetitivo y comprime ~5x. Si el browser no soporta gzip, cae a plano.
+// Link compartible vía backend: el presupuesto se guarda en KV (Upstash) a través
+// de /api/share y se comparte un link corto en nuestro dominio: /ver/<id>.
+// Sin #, sin terceros, sin payload en la URL.
 
 const VER = 1 // versión del formato del payload, por si cambia el modelo
-const MARK_GZIP = 'c'
-const MARK_PLAIN = 'u'
 
 // El contenido del link es visible para quien lo recibe → NO debe filtrar costos.
 // Quitamos costos de productos, mano de obra y la matriz de precios interna.
@@ -35,7 +30,7 @@ function sanitizePresupuesto(p) {
   }
 }
 
-// Sin logo (decisión): mantiene el link corto. Solo datos de texto del taller.
+// Sin logo (decisión): el header del documento muestra nombre/datos de texto.
 function sanitizeLocal(l) {
   return {
     nombre: l?.nombre,
@@ -45,72 +40,26 @@ function sanitizeLocal(l) {
   }
 }
 
-// base64url (URL-safe: usa - y _ en vez de + y /, sin padding).
-function bytesToBase64Url(bytes) {
-  let bin = ''
-  for (const b of bytes) bin += String.fromCharCode(b)
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+function buildSharePayload(presupuesto, local) {
+  return { v: VER, p: sanitizePresupuesto(presupuesto), l: sanitizeLocal(local) }
 }
 
-function base64UrlToBytes(s) {
-  const b64 = s.replace(/-/g, '+').replace(/_/g, '/')
-  const bin = atob(b64)
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0))
-}
-
-async function gzip(str) {
-  const stream = new Blob([new TextEncoder().encode(str)])
-    .stream()
-    .pipeThrough(new CompressionStream('gzip'))
-  return new Uint8Array(await new Response(stream).arrayBuffer())
-}
-
-async function gunzip(bytes) {
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))
-  return await new Response(stream).text()
-}
-
-export async function encodeShare(presupuesto, local) {
-  const json = JSON.stringify({
-    v: VER,
-    p: sanitizePresupuesto(presupuesto),
-    l: sanitizeLocal(local),
+// Guarda el presupuesto en el backend y devuelve el link corto. Lanza si falla.
+export async function createShareLink(presupuesto, local) {
+  const res = await fetch('/api/share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: buildSharePayload(presupuesto, local) }),
   })
-  if (typeof CompressionStream !== 'undefined') {
-    try {
-      return MARK_GZIP + bytesToBase64Url(await gzip(json))
-    } catch {
-      // cae a plano
-    }
-  }
-  return MARK_PLAIN + bytesToBase64Url(new TextEncoder().encode(json))
+  if (!res.ok) throw new Error('No se pudo crear el link')
+  const { id } = await res.json()
+  return `${window.location.origin}/ver/${id}`
 }
 
-export async function decodeShare(token) {
-  const mark = token[0]
-  const bytes = base64UrlToBytes(token.slice(1))
-  const json = mark === MARK_GZIP ? await gunzip(bytes) : new TextDecoder().decode(bytes)
-  const payload = JSON.parse(json)
+// Trae un presupuesto compartido por id. Devuelve null si no existe.
+export async function fetchShared(id) {
+  const res = await fetch(`/api/share?id=${encodeURIComponent(id)}`)
+  if (!res.ok) return null
+  const payload = await res.json()
   return { presupuesto: payload.p, local: payload.l }
-}
-
-export async function buildShareUrl(presupuesto, local) {
-  return `${window.location.origin}/ver#${await encodeShare(presupuesto, local)}`
-}
-
-// Acorta el link con spoo.me (free, sin API key, soporta CORS y preserva el #hash).
-// Si falla (red, rate limit), devuelve el link largo como fallback.
-export async function shortenUrl(longUrl) {
-  try {
-    const res = await fetch('https://spoo.me/', {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ url: longUrl }),
-    })
-    if (!res.ok) return longUrl
-    const data = await res.json()
-    return data.short_url ? data.short_url.replace(/^http:/, 'https:') : longUrl
-  } catch {
-    return longUrl
-  }
 }

@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Copy, Download, Link2, Loader2, MessageCircle, Pencil } from 'lucide-react'
+import { ArrowLeft, Copy, Link2, Loader2, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useStore } from '@/store/useStore'
 import { DetailDocument } from '@/features/detail/DetailDocument'
 import { computeTotals } from '@/lib/calc'
-import { buildWhatsappLink } from '@/lib/whatsapp'
-import { buildShareUrl, shortenUrl } from '@/lib/share'
+import { createShareLink } from '@/lib/share'
 import { formatARS, formatNro } from '@/lib/format'
 
 export function BudgetDetailPage() {
@@ -19,8 +18,6 @@ export function BudgetDetailPage() {
   const saveBudget = useStore((s) => s.saveBudget)
 
   const presupuesto = getBudget(id)
-  const docRef = useRef(null)
-  const [pdfLoading, setPdfLoading] = useState(false)
   const [linkLoading, setLinkLoading] = useState(false)
 
   useEffect(() => {
@@ -34,29 +31,11 @@ export function BudgetDetailPage() {
 
   const totals = computeTotals(presupuesto)
 
-  const handlePdf = async () => {
-    setPdfLoading(true)
-    try {
-      // Carga diferida: las libs de PDF (~350KB) sólo se bajan al exportar.
-      const { exportElementToPDF } = await import('@/lib/pdf')
-      await exportElementToPDF(
-        docRef.current,
-        `presupuesto-${String(presupuesto.nro).padStart(4, '0')}.pdf`
-      )
-      toast.success('PDF generado')
-    } catch (e) {
-      toast.error('No se pudo generar el PDF')
-      console.error(e)
-    } finally {
-      setPdfLoading(false)
-    }
-  }
-
   const handleCopyLink = async () => {
     setLinkLoading(true)
-    // El link corto se genera con un fetch (spoo.me). En iOS, await + writeText
-    // pierde el gesto del click; ClipboardItem con promesa copia cuando resuelve.
-    const textPromise = buildShareUrl(presupuesto, local).then(shortenUrl)
+    // El link se crea con un fetch al backend. En iOS, await + writeText pierde el
+    // gesto del click; ClipboardItem con promesa copia cuando resuelve.
+    const textPromise = createShareLink(presupuesto, local)
     try {
       if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
         await navigator.clipboard.write([
@@ -74,11 +53,6 @@ export function BudgetDetailPage() {
     } finally {
       setLinkLoading(false)
     }
-  }
-
-  const handleWhatsapp = () => {
-    const link = buildWhatsappLink({ ...presupuesto, __totalARS: totals.total }, local)
-    window.open(link, '_blank')
   }
 
   const handleDuplicar = () => {
@@ -109,21 +83,7 @@ export function BudgetDetailPage() {
         <DetailDocument presupuesto={presupuesto} local={local} totals={totals} />
       </div>
 
-      {/* Template de PDF: render fijo a 760px fuera de pantalla. Es lo único que se
-          captura, así el PDF sale igual en celu y en compu (no depende del viewport). */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-[9999px] top-0 w-[760px] bg-white"
-      >
-        <DetailDocument
-          presupuesto={presupuesto}
-          local={local}
-          totals={totals}
-          innerRef={docRef}
-        />
-      </div>
-
-      {/* Vista operador (interno, NO va al PDF) */}
+      {/* Vista operador (interno) */}
       <div className="mt-4 rounded-xl border border-dashed bg-card p-4">
         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Vista operador (interno)
@@ -151,7 +111,7 @@ export function BudgetDetailPage() {
           </div>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          El cliente no ve costos ni ganancia. No se incluyen en el PDF.
+          El cliente no ve costos ni ganancia. No se incluyen en el link.
         </p>
       </div>
 
@@ -161,34 +121,12 @@ export function BudgetDetailPage() {
           <Button
             className="flex-1"
             variant="outline"
-            onClick={handlePdf}
-            disabled={pdfLoading}
-            id="btn-pdf"
-          >
-            {pdfLoading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Download className="size-4" />
-            )}
-            PDF
-          </Button>
-          <Button
-            className="flex-1"
-            variant="outline"
             onClick={handleCopyLink}
             disabled={linkLoading}
             id="btn-link"
           >
             {linkLoading ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
-            Link
-          </Button>
-          <Button
-            className="flex-1 bg-[#25D366] text-white hover:bg-[#1ebe5b]"
-            onClick={handleWhatsapp}
-            id="btn-whatsapp"
-          >
-            <MessageCircle className="size-4" />
-            WhatsApp
+            Copiar link
           </Button>
         </div>
       </div>

@@ -11,7 +11,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Vista pública del link compartido (fuera del layout del dueño) */}
-        <Route path="ver" element={<SharedBudgetPage />} />
+        <Route path="ver/:id" element={<SharedBudgetPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<BudgetListPage />} />
           <Route path="nuevo" element={<BudgetFormPage />} />
