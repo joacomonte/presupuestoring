@@ -78,7 +78,7 @@ function TabScroller({ children }) {
       )}
       <div
         ref={ref}
-        className="overflow-x-auto border-b px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="touch-pan-x overflow-x-auto overflow-y-hidden border-b px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {children}
       </div>

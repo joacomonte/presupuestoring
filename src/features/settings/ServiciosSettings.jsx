@@ -460,8 +460,8 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
               {productosSel.length > 0 && (
                 <div className="divide-y divide-border/60 rounded-lg border">
                   {productosSel.map((p) => {
-                    const cant = item.productoCant?.[p.id] ?? 1
-                    const costoARS = toARS(p.costo, cotizacionUsd) * cant
+                    const cant = item.productoCant?.[p.id] ?? 100
+                    const costoARS = toARS(p.costo, cotizacionUsd) * (cant / 100)
                     return (
                       <div key={p.id} className="flex items-center gap-2 px-3 py-2">
                         <div className="min-w-0 flex-1">
@@ -470,23 +470,28 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
                             {formatMoney(p.costo)} c/u
                           </div>
                         </div>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          min={0}
-                          step="0.01"
-                          value={cant}
-                          onChange={(e) =>
-                            onUpdate({
-                              productoCant: {
-                                ...(item.productoCant || {}),
-                                [p.id]: e.target.value === '' ? 0 : Number(e.target.value),
-                              },
-                            })
-                          }
-                          className="h-8 w-16 text-right"
-                          aria-label={`Cantidad de ${p.nombre}`}
-                        />
+                        <div className="relative w-20 shrink-0">
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            step="1"
+                            value={cant}
+                            onChange={(e) =>
+                              onUpdate({
+                                productoCant: {
+                                  ...(item.productoCant || {}),
+                                  [p.id]: e.target.value === '' ? 0 : Number(e.target.value),
+                                },
+                              })
+                            }
+                            className="h-8 pr-6 text-right"
+                            aria-label={`Porcentaje de uso de ${p.nombre}`}
+                          />
+                          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                            %
+                          </span>
+                        </div>
                         <span className="w-20 shrink-0 text-right text-sm tabular-nums">
                           {formatARS(costoARS)}
                         </span>
@@ -513,7 +518,7 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
                       {formatARS(
                         productosSel.reduce(
                           (s, p) =>
-                            s + toARS(p.costo, cotizacionUsd) * (item.productoCant?.[p.id] ?? 1),
+                            s + toARS(p.costo, cotizacionUsd) * ((item.productoCant?.[p.id] ?? 100) / 100),
                           0
                         )
                       )}
@@ -530,7 +535,7 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
                 />
               )}
               <p className="text-[11px] text-muted-foreground">
-                Cantidad y costo son internos (para calcular tu costo). 1 = envase entero.
+                Porcentaje de uso y costo son internos (para calcular tu costo). 100% = envase entero, puede ser más de 100%.
               </p>
             </div>
           </Section>
