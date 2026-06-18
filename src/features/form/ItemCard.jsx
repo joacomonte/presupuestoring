@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { StickyNote, Trash2, X } from 'lucide-react'
+import { ChevronDown, StickyNote, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,77 +15,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { QuickToggle } from '@/components/QuickToggle'
 import { MoneyInput } from '@/components/MoneyInput'
-import { Stepper } from '@/components/Stepper'
 import { Field } from '@/components/Field'
 import { cn } from '@/lib/utils'
-import { formatARS, formatMoney, deltaLabel } from '@/lib/format'
+import { formatARS, formatMoney } from '@/lib/format'
 import { itemFinalARS, itemCostoARS, itemGananciaARS } from '@/lib/calc'
-
-function OpcionControl({ opcion, value, onChange }) {
-  if (opcion.tipo === 'select') {
-    const options = opcion.valores.map((v) => ({
-      value: v.id,
-      label: v.label,
-      hint: deltaLabel(v.delta),
-    }))
-    return (
-      <QuickToggle
-        id={`op-${opcion.id}`}
-        options={options}
-        value={value}
-        onChange={onChange}
-        size="sm"
-      />
-    )
-  }
-  if (opcion.tipo === 'addons') {
-    return (
-      <div className="flex flex-wrap gap-2">
-        {opcion.opciones.map((a) => {
-          const active = !!value?.[a.id]
-          const hint = deltaLabel(a.delta)
-          return (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => onChange({ ...value, [a.id]: !active })}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition',
-                active
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-input bg-background hover:bg-accent'
-              )}
-            >
-              {a.label}
-              {hint && (
-                <span
-                  className={cn(
-                    active ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                  )}
-                >
-                  {hint}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-    )
-  }
-  if (opcion.tipo === 'cantidad') {
-    return (
-      <div className="flex items-center gap-3">
-        <Stepper value={value ?? opcion.default ?? 0} onChange={onChange} />
-        <span className="text-xs text-muted-foreground">
-          {formatMoney(opcion.precioUnitario)} c/u
-        </span>
-      </div>
-    )
-  }
-  return null
-}
 
 export function ItemCard({ item, cotizacionUsd, productosCatalogo, onChange, onRemove }) {
   const [showObs, setShowObs] = useState(!!item.observaciones)
@@ -94,9 +28,6 @@ export function ItemCard({ item, cotizacionUsd, productosCatalogo, onChange, onR
   const final = itemFinalARS(item, cotizacionUsd)
   const costo = itemCostoARS(item, cotizacionUsd)
   const ganancia = itemGananciaARS(item, cotizacionUsd)
-
-  const setSeleccion = (opId, val) =>
-    onChange({ seleccion: { ...item.seleccion, [opId]: val } })
 
   const productosDisponibles = productosCatalogo.filter(
     (p) => !item.productos.some((ip) => ip.id === p.id)
@@ -162,31 +93,20 @@ export function ItemCard({ item, cotizacionUsd, productosCatalogo, onChange, onR
 
       {/* Precio de venta editable */}
       <div className="mt-3 flex items-center justify-between gap-3">
-        <span className="text-xs text-muted-foreground">Precio de venta</span>
+        <span className="text-xs text-muted-foreground">Personalizar el precio</span>
         <MoneyInput
           id={`precio-${item.id}`}
           value={item.precioVenta}
           onChange={(precioVenta) => onChange({ precioVenta })}
-          className="min-w-0 flex-1"
+          className="w-44"
         />
       </div>
 
-      {/* Opciones / variantes */}
-      {item.opciones?.length > 0 && (
-        <div className="mt-3 space-y-2.5 border-t pt-3">
-          {item.opciones.map((op) => (
-            <div key={op.id}>
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                {op.nombre}
-              </div>
-              <OpcionControl
-                opcion={op}
-                value={item.seleccion?.[op.id]}
-                onChange={(val) => setSeleccion(op.id, val)}
-              />
-            </div>
-          ))}
-        </div>
+      {/* Opciones / variantes (descripción del catálogo) */}
+      {item.opcionesTexto && (
+        <p className="mt-3 whitespace-pre-line border-t pt-3 text-xs text-muted-foreground">
+          {item.opcionesTexto}
+        </p>
       )}
 
       {/* Observaciones del ítem */}
@@ -210,15 +130,18 @@ export function ItemCard({ item, cotizacionUsd, productosCatalogo, onChange, onR
 
       {/* Costos internos / ganancia (solo operador) */}
       <Collapsible className="mt-3 rounded-md border bg-muted/40">
-        <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-3 py-2 text-xs">
+        <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 px-3 py-2 text-xs">
           <span className="font-medium text-muted-foreground">Costos / ganancia (interno)</span>
-          <span
-            className={cn(
-              'font-semibold tabular-nums',
-              ganancia >= 0 ? 'text-emerald-600' : 'text-destructive'
-            )}
-          >
-            Ganancia {formatARS(ganancia)}
+          <span className="flex items-center gap-2">
+            <span
+              className={cn(
+                'font-semibold tabular-nums',
+                ganancia >= 0 ? 'text-emerald-600' : 'text-destructive'
+              )}
+            >
+              Ganancia {formatARS(ganancia)}
+            </span>
+            <ChevronDown className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
           </span>
         </CollapsibleTrigger>
         <CollapsibleContent>

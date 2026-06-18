@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
   CollapsibleContent,
@@ -48,12 +47,8 @@ import {
 import { Field } from '@/components/Field'
 import { MoneyInput } from '@/components/MoneyInput'
 import { useStore } from '@/store/useStore'
-import { uid } from '@/lib/id'
-import { cn } from '@/lib/utils'
 import { formatMoney, formatARS } from '@/lib/format'
 import { toARS } from '@/lib/calc'
-
-const emptyDelta = () => ({ modo: 'monto', monto: { valor: 0, moneda: 'ARS' } })
 
 function Section({ title, subtitle, children }) {
   return (
@@ -65,288 +60,6 @@ function Section({ title, subtitle, children }) {
         {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
       </div>
       {children}
-    </div>
-  )
-}
-
-function DeltaEditor({ delta, onChange }) {
-  const modo = delta?.modo || 'monto'
-  return (
-    <div className="flex items-center gap-1">
-      <div className="flex overflow-hidden rounded-md border text-xs">
-        <button
-          type="button"
-          onClick={() => onChange(emptyDelta())}
-          className={cn(
-            'px-2 py-1 font-semibold',
-            modo === 'monto' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-          )}
-        >
-          $
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange({ modo: 'pct', pct: 0 })}
-          className={cn(
-            'px-2 py-1 font-semibold',
-            modo === 'pct' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
-          )}
-        >
-          %
-        </button>
-      </div>
-      {modo === 'monto' ? (
-        <MoneyInput
-          value={delta.monto}
-          onChange={(monto) => onChange({ modo: 'monto', monto })}
-          className="w-44"
-        />
-      ) : (
-        <Input
-          type="number"
-          value={delta.pct || ''}
-          onChange={(e) => onChange({ modo: 'pct', pct: Number(e.target.value) || 0 })}
-          className="w-20"
-          placeholder="%"
-        />
-      )}
-    </div>
-  )
-}
-
-function OptionsEditor({ opciones, onChange }) {
-  const updateOp = (opId, patch) =>
-    onChange(opciones.map((o) => (o.id === opId ? { ...o, ...patch } : o)))
-  const removeOp = (opId) => onChange(opciones.filter((o) => o.id !== opId))
-  const addOp = (tipo) => {
-    const base = { id: uid('op'), nombre: 'Nueva opción' }
-    let nueva
-    if (tipo === 'select') {
-      const vid = uid('v')
-      nueva = {
-        ...base,
-        tipo: 'select',
-        valores: [{ id: vid, label: 'Base', delta: emptyDelta() }],
-        defaultId: vid,
-      }
-    } else if (tipo === 'addons') {
-      nueva = {
-        ...base,
-        tipo: 'addons',
-        opciones: [{ id: uid('a'), label: 'Add-on', delta: emptyDelta(), default: false }],
-      }
-    } else {
-      nueva = {
-        ...base,
-        tipo: 'cantidad',
-        precioUnitario: { valor: 0, moneda: 'ARS' },
-        default: 1,
-      }
-    }
-    onChange([...opciones, nueva])
-  }
-
-  return (
-    <div className="space-y-3">
-      {opciones.map((op) => (
-        <div key={op.id} className="rounded-lg border bg-muted/30 p-2">
-          <div className="flex items-center gap-2">
-            <Input
-              value={op.nombre}
-              onChange={(e) => updateOp(op.id, { nombre: e.target.value })}
-              className="h-8 flex-1"
-            />
-            <Badge variant="secondary" className="shrink-0 capitalize">
-              {op.tipo}
-            </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 text-muted-foreground hover:text-destructive"
-              onClick={() => removeOp(op.id)}
-              aria-label="Eliminar opción"
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
-
-          {op.tipo === 'select' && (
-            <div className="mt-2 space-y-1.5">
-              {op.valores.map((v) => (
-                <div key={v.id} className="flex flex-wrap items-center gap-1.5">
-                  <Input
-                    value={v.label}
-                    onChange={(e) =>
-                      updateOp(op.id, {
-                        valores: op.valores.map((x) =>
-                          x.id === v.id ? { ...x, label: e.target.value } : x
-                        ),
-                      })
-                    }
-                    className="h-8 w-28"
-                  />
-                  <DeltaEditor
-                    delta={v.delta}
-                    onChange={(delta) =>
-                      updateOp(op.id, {
-                        valores: op.valores.map((x) =>
-                          x.id === v.id ? { ...x, delta } : x
-                        ),
-                      })
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() => updateOp(op.id, { defaultId: v.id })}
-                    className={cn(
-                      'rounded px-1.5 py-0.5 text-[11px]',
-                      op.defaultId === v.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent'
-                    )}
-                  >
-                    default
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateOp(op.id, { valores: op.valores.filter((x) => x.id !== v.id) })
-                    }
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Quitar valor"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-              ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() =>
-                  updateOp(op.id, {
-                    valores: [
-                      ...op.valores,
-                      { id: uid('v'), label: 'Valor', delta: emptyDelta() },
-                    ],
-                  })
-                }
-              >
-                <Plus className="size-3.5" /> Valor
-              </Button>
-            </div>
-          )}
-
-          {op.tipo === 'addons' && (
-            <div className="mt-2 space-y-1.5">
-              {op.opciones.map((a) => (
-                <div key={a.id} className="flex flex-wrap items-center gap-1.5">
-                  <Input
-                    value={a.label}
-                    onChange={(e) =>
-                      updateOp(op.id, {
-                        opciones: op.opciones.map((x) =>
-                          x.id === a.id ? { ...x, label: e.target.value } : x
-                        ),
-                      })
-                    }
-                    className="h-8 w-28"
-                  />
-                  <DeltaEditor
-                    delta={a.delta}
-                    onChange={(delta) =>
-                      updateOp(op.id, {
-                        opciones: op.opciones.map((x) =>
-                          x.id === a.id ? { ...x, delta } : x
-                        ),
-                      })
-                    }
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateOp(op.id, {
-                        opciones: op.opciones.map((x) =>
-                          x.id === a.id ? { ...x, default: !x.default } : x
-                        ),
-                      })
-                    }
-                    className={cn(
-                      'rounded px-1.5 py-0.5 text-[11px]',
-                      a.default
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-accent'
-                    )}
-                  >
-                    on
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateOp(op.id, {
-                        opciones: op.opciones.filter((x) => x.id !== a.id),
-                      })
-                    }
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Quitar add-on"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </div>
-              ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() =>
-                  updateOp(op.id, {
-                    opciones: [
-                      ...op.opciones,
-                      { id: uid('a'), label: 'Add-on', delta: emptyDelta(), default: false },
-                    ],
-                  })
-                }
-              >
-                <Plus className="size-3.5" /> Add-on
-              </Button>
-            </div>
-          )}
-
-          {op.tipo === 'cantidad' && (
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Precio unitario</span>
-                <MoneyInput
-                  value={op.precioUnitario}
-                  onChange={(precioUnitario) => updateOp(op.id, { precioUnitario })}
-                  className="w-44"
-                />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Default</span>
-                <Input
-                  type="number"
-                  value={op.default ?? 0}
-                  onChange={(e) => updateOp(op.id, { default: Number(e.target.value) || 0 })}
-                  className="h-8 w-16"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
-
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => addOp('select')}>
-          <Plus className="size-3.5" /> Selección
-        </Button>
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => addOp('addons')}>
-          <Plus className="size-3.5" /> Add-ons
-        </Button>
-        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => addOp('cantidad')}>
-          <Plus className="size-3.5" /> Cantidad
-        </Button>
-      </div>
     </div>
   )
 }
@@ -395,6 +108,11 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
   const categoria = categorias.find((c) => c.id === item.categoriaId)
   const setPrecio = (tipoId, money) =>
     onUpdate({ precios: { ...item.precios, [tipoId]: money } })
+  const [bulkPrecio, setBulkPrecio] = useState({ valor: 0, moneda: 'ARS' })
+  const aplicarATodos = () =>
+    onUpdate({
+      precios: Object.fromEntries(tiposAuto.map((t) => [t.id, bulkPrecio])),
+    })
 
   const productosSel = (item.productoIds || [])
     .map((pid) => productos.find((p) => p.id === pid))
@@ -452,7 +170,26 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
           </div>
 
           {/* Precio de venta */}
-          <Section title="Precio de venta" subtitle="Por tipo de vehículo">
+          <Section title="Precio por tipo de vehiculo">
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+              <span className="flex-1 truncate text-xs font-medium text-muted-foreground">
+                Aplicar a todos
+              </span>
+              <MoneyInput
+                value={bulkPrecio}
+                onChange={setBulkPrecio}
+                className="min-w-0 flex-1"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 shrink-0"
+                onClick={aplicarATodos}
+              >
+                Aplicar
+              </Button>
+            </div>
             <div className="divide-y divide-border/60 rounded-lg border">
               {tiposAuto.map((t) => (
                 <div key={t.id} className="flex items-center gap-3 px-3 py-2">
@@ -469,8 +206,8 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
 
           {/* Productos */}
           <Section
-            title="Productos"
-            subtitle="En el presupuesto se listan los productos usados (sin cantidad ni costo): solo para que el cliente sepa qué se aplicó."
+            title="Productos utilizados"
+            subtitle="El cliente solo ve qué productos se usaron: no ve el costo ni cuánto se usó. El porcentaje de uso y el costo son para tu resumen interno."
           >
             <div className="space-y-1.5">
               {productosSel.length > 0 && (
@@ -558,9 +295,16 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
 
           {/* Opciones / variantes */}
           <Section title="Opciones / variantes">
-            <OptionsEditor
-              opciones={item.opciones || []}
-              onChange={(opciones) => onUpdate({ opciones })}
+            <Textarea
+              value={item.opcionesTexto || ''}
+              onChange={(e) => onUpdate({ opcionesTexto: e.target.value })}
+              rows={4}
+              placeholder={
+                'Anotá a mano las opciones y variantes. Por ejemplo:\n' +
+                '- Selección: Base 1 ($10.000) / Base 2 ($20.000)\n' +
+                '- Add-ons: Cera líquida (+$10.000), Pulido (+$5.000)\n' +
+                '- Cantidad: $5.000 c/u (default 1)'
+              }
             />
           </Section>
 

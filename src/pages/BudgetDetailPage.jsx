@@ -158,7 +158,7 @@ export function BudgetDetailPage() {
             id="btn-editar"
           >
             <Pencil className="size-4" />
-            Editar presupuesto {formatNro(presupuesto.nro)}
+            Editar
           </Button>
           <Dialog open={shareOpen} onOpenChange={setShareOpen}>
             <DialogTrigger asChild>

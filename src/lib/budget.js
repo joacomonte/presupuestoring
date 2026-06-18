@@ -35,6 +35,7 @@ export function materializeItem(catalogItem, tipoAutoId, ctx) {
     titulo: catalogItem.titulo,
     descripcion: catalogItem.descripcion,
     precioVenta: { ...precioVenta },
+    opcionesTexto: catalogItem.opcionesTexto || '',
     opciones: structuredClone(catalogItem.opciones || []),
     seleccion,
     productos: prods,

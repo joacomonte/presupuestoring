@@ -1,4 +1,4 @@
-import { itemFinalARS, itemOpcionesElegidas } from '@/lib/calc'
+import { itemFinalARS } from '@/lib/calc'
 import { formatARS, formatNro, formatFecha } from '@/lib/format'
 
 function groupByCategoria(items) {
@@ -15,17 +15,7 @@ function groupByCategoria(items) {
 }
 
 function usaUsd(items) {
-  return items.some((it) => {
-    if (it.precioVenta?.moneda === 'USD') return true
-    return (it.opciones || []).some((op) => {
-      if (op.tipo === 'cantidad') return op.precioUnitario?.moneda === 'USD'
-      if (op.tipo === 'select')
-        return (op.valores || []).some((v) => v.delta?.monto?.moneda === 'USD')
-      if (op.tipo === 'addons')
-        return (op.opciones || []).some((a) => a.delta?.monto?.moneda === 'USD')
-      return false
-    })
-  })
+  return items.some((it) => it.precioVenta?.moneda === 'USD')
 }
 
 function Línea({ label, value, bold, big, color }) {
@@ -137,18 +127,12 @@ export function DetailDocument({ presupuesto, local, totals, innerRef }) {
             {g.nombre}
           </div>
           {g.items.map((it) => {
-            const opciones = itemOpcionesElegidas(it, cot)
             return (
               <div key={it.id} className="flex items-start justify-between gap-3 py-1.5">
                 <div className="min-w-0">
                   <div className="text-sm font-medium">{it.titulo || 'Ítem'}</div>
                   {it.descripcion && (
                     <div className="text-xs text-zinc-500">{it.descripcion}</div>
-                  )}
-                  {opciones.length > 0 && (
-                    <div className="text-xs text-zinc-500">
-                      {opciones.map((o) => `${o.nombre}: ${o.label}`).join(' · ')}
-                    </div>
                   )}
                   {it.observaciones && (
                     <div className="text-xs italic text-zinc-500">{it.observaciones}</div>

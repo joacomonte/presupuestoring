@@ -29,24 +29,19 @@ export function MoneyInput({
 
   return (
     <div className={cn('flex items-stretch', className)}>
-      <div className="flex shrink-0 overflow-hidden rounded-l-md border border-r-0">
-        {['ARS', 'USD'].map((m) => (
-          <button
-            key={m}
-            type="button"
-            disabled={!allowCurrencyToggle}
-            onClick={() => onChange({ ...money, moneda: m })}
-            className={cn(
-              'px-2 text-xs font-semibold transition disabled:opacity-100',
-              money.moneda === m
-                ? 'bg-secondary text-secondary-foreground'
-                : 'bg-background text-muted-foreground/60 hover:bg-accent'
-            )}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
+      <button
+        type="button"
+        disabled={!allowCurrencyToggle}
+        onClick={() =>
+          onChange({ ...money, moneda: money.moneda === 'ARS' ? 'USD' : 'ARS' })
+        }
+        className={cn(
+          'flex w-12 shrink-0 items-center justify-center rounded-l-md border border-r-0 bg-secondary text-xs font-semibold text-secondary-foreground transition hover:bg-accent disabled:opacity-100',
+          !allowCurrencyToggle && 'cursor-default hover:bg-secondary'
+        )}
+      >
+        {money.moneda}
+      </button>
       <div className="relative flex-1">
         <Input
           id={id}

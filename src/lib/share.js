@@ -2,7 +2,7 @@
 // de /api/share y se comparte un link corto en nuestro dominio: /ver/<id>.
 // Sin #, sin terceros, sin payload en la URL.
 
-import { itemFinalARS, itemOpcionesElegidas } from '@/lib/calc'
+import { itemFinalARS } from '@/lib/calc'
 import { formatARS, formatNro, formatFecha } from '@/lib/format'
 
 const VER = 1 // versión del formato del payload, por si cambia el modelo
@@ -81,10 +81,6 @@ export function buildWhatsappText(presupuesto, local, totals) {
     L.push('*Servicios*')
     for (const it of items) {
       L.push(`• ${it.titulo || 'Ítem'} — ${formatARS(itemFinalARS(it, cot))}`)
-      const opciones = itemOpcionesElegidas(it, cot)
-      if (opciones.length > 0) {
-        L.push(`  _${opciones.map((o) => `${o.nombre}: ${o.label}`).join(' · ')}_`)
-      }
     }
     L.push('')
   }

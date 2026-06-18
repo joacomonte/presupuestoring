@@ -14,13 +14,6 @@ export function emptyMoney(moneda = 'ARS') {
   return { valor: 0, moneda }
 }
 
-// Resuelve un delta de opción a ARS. Los % se aplican sobre el precio base del ítem.
-export function resolveDeltaARS(delta, baseARS, cotizacionUsd) {
-  if (!delta) return 0
-  if (delta.modo === 'pct') return (baseARS * (Number(delta.pct) || 0)) / 100
-  return toARS(delta.monto, cotizacionUsd)
-}
-
 // Precio del ítem en la matriz para un tipo de auto, con fallback por multiplicador.
 export function resolveMatrixPrice(item, tipoAutoId, tiposAuto) {
   const precios = item.precios || {}
@@ -53,28 +46,8 @@ export function itemBaseARS(item, cotizacionUsd) {
   return toARS(item.precioVenta, cotizacionUsd)
 }
 
-export function itemOpcionesDeltaARS(item, cotizacionUsd) {
-  const baseARS = itemBaseARS(item, cotizacionUsd)
-  let total = 0
-  for (const op of item.opciones || []) {
-    const sel = item.seleccion?.[op.id]
-    if (op.tipo === 'select') {
-      const val = (op.valores || []).find((v) => v.id === sel)
-      if (val) total += resolveDeltaARS(val.delta, baseARS, cotizacionUsd)
-    } else if (op.tipo === 'addons') {
-      for (const a of op.opciones || []) {
-        if (sel?.[a.id]) total += resolveDeltaARS(a.delta, baseARS, cotizacionUsd)
-      }
-    } else if (op.tipo === 'cantidad') {
-      const qty = sel ?? op.default ?? 0
-      total += toARS(op.precioUnitario, cotizacionUsd) * qty
-    }
-  }
-  return total
-}
-
 export function itemFinalARS(item, cotizacionUsd) {
-  return itemBaseARS(item, cotizacionUsd) + itemOpcionesDeltaARS(item, cotizacionUsd)
+  return itemBaseARS(item, cotizacionUsd)
 }
 
 export function itemCostoARS(item, cotizacionUsd) {
@@ -87,36 +60,6 @@ export function itemCostoARS(item, cotizacionUsd) {
 
 export function itemGananciaARS(item, cotizacionUsd) {
   return itemFinalARS(item, cotizacionUsd) - itemCostoARS(item, cotizacionUsd)
-}
-
-// Etiquetas legibles de las opciones elegidas (para el detalle).
-export function itemOpcionesElegidas(item, cotizacionUsd) {
-  const baseARS = itemBaseARS(item, cotizacionUsd)
-  const out = []
-  for (const op of item.opciones || []) {
-    const sel = item.seleccion?.[op.id]
-    if (op.tipo === 'select') {
-      const val = (op.valores || []).find((v) => v.id === sel)
-      if (val) {
-        const d = resolveDeltaARS(val.delta, baseARS, cotizacionUsd)
-        out.push({ nombre: op.nombre, label: val.label, deltaARS: d })
-      }
-    } else if (op.tipo === 'addons') {
-      for (const a of op.opciones || []) {
-        if (sel?.[a.id]) {
-          const d = resolveDeltaARS(a.delta, baseARS, cotizacionUsd)
-          out.push({ nombre: op.nombre, label: a.label, deltaARS: d })
-        }
-      }
-    } else if (op.tipo === 'cantidad') {
-      const qty = sel ?? op.default ?? 0
-      if (qty > 0) {
-        const d = toARS(op.precioUnitario, cotizacionUsd) * qty
-        out.push({ nombre: op.nombre, label: `${qty} u.`, deltaARS: d })
-      }
-    }
-  }
-  return out
 }
 
 // ---- Cálculos a nivel presupuesto ----
