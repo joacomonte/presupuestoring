@@ -72,7 +72,9 @@ export function DataSettings() {
               </SelectContent>
             </Select>
           </Field>
-          <Button onClick={() => setConfirmBump(true)}>Aplicar</Button>
+          {pct.trim() !== '' && (
+            <Button onClick={() => setConfirmBump(true)}>Aplicar</Button>
+          )}
         </div>
       </div>
 
