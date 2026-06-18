@@ -1,4 +1,4 @@
-import { ChevronDown, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, GripVertical, Plus, Star, Trash2 } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -17,7 +17,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,46 +44,55 @@ function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
 
   return (
     <Collapsible ref={setNodeRef} style={style} className="rounded-lg border p-2">
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
-          aria-label="Reordenar paquete"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="size-4" />
-        </button>
-        <CollapsibleTrigger
-          className="group flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:bg-accent"
-          aria-label="Desplegar paquete"
-        >
-          <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
-        </CollapsibleTrigger>
-        <Input
-          value={paq.nombre}
-          onChange={(e) => updatePaquete(paq.id, { nombre: e.target.value })}
-          className="h-8 flex-1"
-        />
-        <Badge asChild variant={isDefault ? 'default' : 'outline'}>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
           <button
             type="button"
+            className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
+            aria-label="Reordenar paquete"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="size-4" />
+          </button>
+          <Input
+            value={paq.nombre}
+            onChange={(e) => updatePaquete(paq.id, { nombre: e.target.value })}
+            className="h-8 flex-1"
+          />
+        </div>
+        <div className="flex items-center gap-1 pl-11">
+          <CollapsibleTrigger className="group flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent active:bg-accent">
+            <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
+            {paq.itemIds?.length || 0} servicios
+          </CollapsibleTrigger>
+          <div className="flex-1" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'size-8 shrink-0',
+              isDefault
+                ? 'text-primary hover:text-primary'
+                : 'text-muted-foreground/50 hover:text-foreground'
+            )}
             onClick={() => setPaqueteDestacado(isDefault ? null : paq.id)}
             aria-pressed={isDefault}
-            className={cn('shrink-0 cursor-pointer', !isDefault && 'text-muted-foreground')}
+            aria-label={isDefault ? 'Quitar como default' : 'Marcar como default'}
+            title={isDefault ? 'Paquete default' : 'Marcar como default'}
           >
-            Default
-          </button>
-        </Badge>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8 text-muted-foreground hover:text-destructive"
-          onClick={() => removePaquete(paq.id)}
-          aria-label="Eliminar paquete"
-        >
-          <Trash2 className="size-4" />
-        </Button>
+            <Star className={cn('size-4', isDefault && 'fill-current')} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={() => removePaquete(paq.id)}
+            aria-label="Eliminar paquete"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
       </div>
       <CollapsibleContent className="mt-2 space-y-2">
         {categoriasOrdenadas.map((cat) => {
