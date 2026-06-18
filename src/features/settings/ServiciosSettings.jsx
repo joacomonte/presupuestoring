@@ -675,9 +675,11 @@ export function ServiciosSettings() {
     <div className="space-y-6">
       {/* Categorías de servicio */}
       <div>
-        <div className="mb-2">
-          <h3 className="text-sm font-semibold">Categorías de servicio</h3>
-          <p className="text-xs text-muted-foreground">Arrastrá para ordenar.</p>
+        <div className="mb-3">
+          <h3 className="mb-1 text-sm font-semibold">Categorías de servicio</h3>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Agrupan los servicios (ej. Lavado, Pulido, Tratamientos) para ordenarlos en el catálogo y en el presupuesto. Arrastrá para cambiar el orden en que aparecen.
+          </p>
         </div>
         <DndContext
           sensors={sensors}
@@ -711,7 +713,12 @@ export function ServiciosSettings() {
       </div>
 
       <div className="border-t pt-4">
-        <h3 className="mb-2 text-sm font-semibold">Servicios individuales</h3>
+        <div className="mb-4">
+          <h3 className="mb-1 text-sm font-semibold">Servicios individuales</h3>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Cada servicio que ofrecés, dentro de su categoría. Definís su precio por tipo de vehículo, los productos que consume (para tu costo) y variantes opcionales. Después los sumás a un presupuesto sueltos o dentro de un paquete.
+          </p>
+        </div>
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
