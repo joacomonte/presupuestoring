@@ -39,7 +39,7 @@ export function AppLayout() {
               </Link>
             </Button>
           )}
-          <Button asChild size="sm" variant="ghost" id="btn-ajustes" aria-label="Configurar costos">
+          <Button asChild size="sm" variant="ghost" id="btn-ajustes" aria-label="Configuraciones">
             <NavLink
               to="/ajustes"
               className={({ isActive }) =>
@@ -47,7 +47,7 @@ export function AppLayout() {
               }
             >
               <Settings className="size-5" />
-              <span className="hidden sm:inline">Configurar costos</span>
+              <span className="hidden sm:inline">Configuraciones</span>
             </NavLink>
           </Button>
         </div>
