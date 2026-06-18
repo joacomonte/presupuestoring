@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Package } from 'lucide-react'
+import { ArrowLeft, User, Car, Tag, Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useStore } from '@/store/useStore'
 import { ClienteSection } from '@/features/form/ClienteSection'
 import { VehiculoSection } from '@/features/form/VehiculoSection'
 import { CategoriaSection } from '@/features/form/CategoriaSection'
 import { CierreSection } from '@/features/form/CierreSection'
+import { CrearWizard } from '@/features/form/CrearWizard'
 import { SummaryBar } from '@/features/form/SummaryBar'
 import { materializeItem, blankItem, repriceItem } from '@/lib/budget'
 import { computeTotals, itemFinalARS } from '@/lib/calc'
@@ -23,6 +25,7 @@ export function BudgetFormPage() {
   const addTipoAuto = useStore((s) => s.addTipoAuto)
   const addFormaPago = useStore((s) => s.addFormaPago)
 
+  const config = useStore((s) => s.config)
   const tiposAuto = useStore((s) => s.tiposAuto)
   const formasPago = useStore((s) => s.formasPago)
   const categorias = useStore((s) => s.categorias)
@@ -37,8 +40,30 @@ export function BudgetFormPage() {
         : null
       : createDraft()
   )
-  const [openSections, setOpenSections] = useState({})
   const [saving, setSaving] = useState(false)
+  // Presupuestos nuevos pasan por el wizard (tipo de vehículo + paquete/manual);
+  // al editar uno existente se salta directo al formulario.
+  const [wizardDone, setWizardDone] = useState(!!id)
+  const [tab, setTab] = useState('cliente')
+
+  const tabsScrollRef = useRef(null)
+  const [tabsScroll, setTabsScroll] = useState({ left: false, right: false })
+
+  const updateTabsScroll = () => {
+    const el = tabsScrollRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setTabsScroll({
+      left: scrollLeft > 1,
+      right: scrollLeft + clientWidth < scrollWidth - 1,
+    })
+  }
+
+  useEffect(() => {
+    updateTabsScroll()
+    window.addEventListener('resize', updateTabsScroll)
+    return () => window.removeEventListener('resize', updateTabsScroll)
+  }, [categorias.length])
 
   useEffect(() => {
     if (id && !getBudget(id)) {
@@ -85,26 +110,26 @@ export function BudgetFormPage() {
     setDraft((d) => ({ ...d, items: [...d.items, blankItem(catId, cat?.nombre || '')] }))
   }
 
-  const loadPaquete = (paq) => {
+  // Completa el wizard: fija el tipo de vehículo y precarga los ítems del
+  // paquete elegido (o arranca vacío si es manual). Reemplaza los ítems del
+  // borrador para no arrastrar la precarga inicial de createDraft.
+  const completeWizard = (tipoAutoId, paquete) => {
     setDraft((d) => {
-      const nuevos = (paq.itemIds || [])
-        .map((iid) => catalogoItems.find((c) => c.id === iid))
-        .filter(Boolean)
-        .filter((ci) => !d.items.some((it) => it.catalogoItemId === ci.id))
-        .map((ci) => materializeItem(ci, d.vehiculo.tipoAutoId, ctx))
-      return { ...d, items: [...d.items, ...nuevos] }
+      const items = paquete
+        ? (paquete.itemIds || [])
+            .map((iid) => catalogoItems.find((c) => c.id === iid))
+            .filter(Boolean)
+            .map((ci) => materializeItem(ci, tipoAutoId, ctx))
+        : []
+      return { ...d, vehiculo: { ...d.vehiculo, tipoAutoId }, items }
     })
-    toast.success(`Paquete "${paq.nombre}" cargado`)
+    setWizardDone(true)
   }
-
-  // ---- secciones plegables ----
-  const isOpen = (key, fallback) => openSections[key] ?? fallback
-  const setOpen = (key) => (v) => setOpenSections((s) => ({ ...s, [key]: v }))
 
   const jumpToItem = (itemId) => {
     const item = draft.items.find((i) => i.id === itemId)
     if (!item) return
-    setOpenSections((s) => ({ ...s, [`cat-${item.categoriaId}`]: true }))
+    setTab(`cat-${item.categoriaId}`)
     requestAnimationFrame(() => {
       const el = document.getElementById(`item-${itemId}`)
       if (el) {
@@ -144,90 +169,109 @@ export function BudgetFormPage() {
         </h1>
       </div>
 
-      <div className="space-y-3">
-        <ClienteSection
-          cliente={draft.cliente}
-          onChange={patchCliente}
-          open={isOpen('cliente', false)}
-          onOpenChange={setOpen('cliente')}
-        />
-
-        <VehiculoSection
-          vehiculo={draft.vehiculo}
-          onChange={patchVehiculo}
+      {!wizardDone ? (
+        <CrearWizard
           tiposAuto={tiposAuto}
-          onAddTipoAuto={(name) => addTipoAuto(name)}
-          open={isOpen('vehiculo', true)}
-          onOpenChange={setOpen('vehiculo')}
+          paquetes={paquetes}
+          paqueteDestacadoId={config.paqueteDestacadoId}
+          ctx={ctx}
+          cotizacionUsd={cot}
+          onComplete={completeWizard}
         />
-
-        {/* Paquetes / combos */}
-        <div className="rounded-xl border bg-card p-3 shadow-sm">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <Package className="size-4 text-muted-foreground" />
-            Paquetes / combos
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {paquetes.map((paq) => (
-              <button
-                key={paq.id}
-                type="button"
-                onClick={() => loadPaquete(paq)}
-                className="rounded-full border border-dashed px-3 py-1.5 text-sm hover:border-primary hover:bg-accent"
+      ) : (
+        <>
+          <Tabs value={tab} onValueChange={setTab}>
+            <div className="relative -mx-4">
+              {tabsScroll.left && (
+                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center bg-gradient-to-r from-background to-transparent pl-2 pr-8">
+                  <ChevronLeft className="size-4 text-muted-foreground" />
+                </div>
+              )}
+              <div
+                ref={tabsScrollRef}
+                onScroll={updateTabsScroll}
+                className="overflow-x-auto px-4"
               >
-                + {paq.nombre}
-              </button>
+                <TabsList variant="line" className="w-max">
+                  <TabsTrigger value="cliente">
+                    <User /> Cliente
+                  </TabsTrigger>
+                  <TabsTrigger value="vehiculo">
+                    <Car /> Vehículo
+                  </TabsTrigger>
+                  {categoriasOrdenadas.map((cat) => (
+                    <TabsTrigger key={cat.id} value={`cat-${cat.id}`}>
+                      <Tag /> {cat.nombre}
+                    </TabsTrigger>
+                  ))}
+                  <TabsTrigger value="cierre">
+                    <Receipt /> Cierre
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              {tabsScroll.right && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex items-center bg-gradient-to-l from-background to-transparent pl-8 pr-2">
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+
+            <TabsContent value="cliente">
+              <ClienteSection cliente={draft.cliente} onChange={patchCliente} plain />
+            </TabsContent>
+
+            <TabsContent value="vehiculo">
+              <VehiculoSection
+                vehiculo={draft.vehiculo}
+                onChange={patchVehiculo}
+                tiposAuto={tiposAuto}
+                onAddTipoAuto={(name) => addTipoAuto(name)}
+                plain
+              />
+            </TabsContent>
+
+            {categoriasOrdenadas.map((cat) => (
+              <TabsContent key={cat.id} value={`cat-${cat.id}`}>
+                <CategoriaSection
+                  categoria={cat}
+                  catalogItems={catalogoItems.filter((i) => i.categoriaId === cat.id)}
+                  draftItems={draft.items.filter((it) => it.categoriaId === cat.id)}
+                  tiposAuto={tiposAuto}
+                  tipoAutoId={draft.vehiculo.tipoAutoId}
+                  cotizacionUsd={cot}
+                  productosCatalogo={productos}
+                  onToggleItem={toggleCatalogItem}
+                  onChangeItem={updateItem}
+                  onRemoveItem={removeItem}
+                  onAddBlank={addBlank}
+                  plain
+                />
+              </TabsContent>
             ))}
-            {paquetes.length === 0 && (
-              <span className="text-xs text-muted-foreground">
-                No hay paquetes configurados.
-              </span>
-            )}
-          </div>
-        </div>
 
-        {categoriasOrdenadas.map((cat) => {
-          const draftItems = draft.items.filter((it) => it.categoriaId === cat.id)
-          return (
-            <CategoriaSection
-              key={cat.id}
-              categoria={cat}
-              catalogItems={catalogoItems.filter((i) => i.categoriaId === cat.id)}
-              draftItems={draftItems}
-              tiposAuto={tiposAuto}
-              tipoAutoId={draft.vehiculo.tipoAutoId}
-              cotizacionUsd={cot}
-              productosCatalogo={productos}
-              onToggleItem={toggleCatalogItem}
-              onChangeItem={updateItem}
-              onRemoveItem={removeItem}
-              onAddBlank={addBlank}
-              open={isOpen(`cat-${cat.id}`, draftItems.length > 0)}
-              onOpenChange={setOpen(`cat-${cat.id}`)}
-            />
-          )
-        })}
+            <TabsContent value="cierre">
+              <CierreSection
+                presupuesto={draft}
+                onChange={patch}
+                formasPago={formasPago}
+                onAddFormaPago={(name) => addFormaPago(name)}
+                totals={totals}
+                plain
+              />
+            </TabsContent>
+          </Tabs>
 
-        <CierreSection
-          presupuesto={draft}
-          onChange={patch}
-          formasPago={formasPago}
-          onAddFormaPago={(name) => addFormaPago(name)}
-          totals={totals}
-          open={isOpen('cierre', false)}
-          onOpenChange={setOpen('cierre')}
-        />
-      </div>
-
-      <SummaryBar
-        presupuesto={draft}
-        totals={totals}
-        itemsResumen={itemsResumen}
-        onPatch={patch}
-        onGenerar={onGenerar}
-        onJumpToItem={jumpToItem}
-        saving={saving}
-      />
+          <SummaryBar
+            presupuesto={draft}
+            totals={totals}
+            itemsResumen={itemsResumen}
+            onPatch={patch}
+            onGenerar={onGenerar}
+            onJumpToItem={jumpToItem}
+            saving={saving}
+          />
+        </>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, Plus, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Plus, Search, Trash2, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   Command,
@@ -34,9 +34,24 @@ import { MoneyInput } from '@/components/MoneyInput'
 import { useStore } from '@/store/useStore'
 import { uid } from '@/lib/id'
 import { cn } from '@/lib/utils'
-import { formatMoney } from '@/lib/format'
+import { formatMoney, formatARS } from '@/lib/format'
+import { toARS } from '@/lib/calc'
 
 const emptyDelta = () => ({ modo: 'monto', monto: { valor: 0, moneda: 'ARS' } })
+
+function Section({ title, subtitle, children }) {
+  return (
+    <div className="mt-4 space-y-3 border-t pt-3">
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground">
+          {title}
+        </h4>
+        {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+      </div>
+      {children}
+    </div>
+  )
+}
 
 function DeltaEditor({ delta, onChange }) {
   const modo = delta?.modo || 'monto'
@@ -360,7 +375,7 @@ function ProductoPicker({ productos, onSelect }) {
   )
 }
 
-function ItemEditor({ item, categorias, tiposAuto, productos, onUpdate, onRemove }) {
+function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onUpdate, onRemove, defaultOpen }) {
   const categoria = categorias.find((c) => c.id === item.categoriaId)
   const setPrecio = (tipoId, money) =>
     onUpdate({ precios: { ...item.precios, [tipoId]: money } })
@@ -371,7 +386,7 @@ function ItemEditor({ item, categorias, tiposAuto, productos, onUpdate, onRemove
   const productosDisp = productos.filter((p) => !(item.productoIds || []).includes(p.id))
 
   return (
-    <Collapsible className="rounded-lg border bg-card">
+    <Collapsible defaultOpen={defaultOpen} className="rounded-lg border bg-card">
       <CollapsibleTrigger className="group flex w-full items-center gap-2 px-3 py-2.5 text-left">
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{item.titulo || 'Sin título'}</div>
@@ -382,133 +397,201 @@ function ItemEditor({ item, categorias, tiposAuto, productos, onUpdate, onRemove
         <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="space-y-3 border-t p-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Título">
-              <Input
-                value={item.titulo}
-                onChange={(e) => onUpdate({ titulo: e.target.value })}
+        <div className="border-t p-3">
+          {/* Datos */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Título">
+                <Input
+                  value={item.titulo}
+                  onChange={(e) => onUpdate({ titulo: e.target.value })}
+                />
+              </Field>
+              <Field label="Categoría">
+                <Select
+                  value={item.categoriaId || ''}
+                  onValueChange={(v) => onUpdate({ categoriaId: v })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Elegir…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categorias.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+
+            <Field label="Descripción">
+              <Textarea
+                value={item.descripcion}
+                onChange={(e) => onUpdate({ descripcion: e.target.value })}
+                rows={2}
               />
-            </Field>
-            <Field label="Categoría">
-              <Select
-                value={item.categoriaId || ''}
-                onValueChange={(v) => onUpdate({ categoriaId: v })}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Elegir…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categorias.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </Field>
           </div>
 
-          <Field label="Descripción">
-            <Textarea
-              value={item.descripcion}
-              onChange={(e) => onUpdate({ descripcion: e.target.value })}
-              rows={2}
-            />
-          </Field>
-
-          {/* Matriz de precios por tipo de auto */}
-          <Field label="Precio de venta por tipo de auto">
-            <div className="space-y-2">
+          {/* Precio de venta */}
+          <Section title="Precio de venta" subtitle="Por tipo de vehículo">
+            <div className="divide-y divide-border/60 rounded-lg border">
               {tiposAuto.map((t) => (
-                <div key={t.id} className="flex items-center gap-2">
-                  <span className="w-32 shrink-0 truncate text-sm">{t.nombre}</span>
+                <div key={t.id} className="flex items-center gap-3 px-3 py-2">
+                  <span className="flex-1 truncate text-sm">{t.nombre}</span>
                   <MoneyInput
                     value={item.precios?.[t.id] || { valor: 0, moneda: 'ARS' }}
                     onChange={(m) => setPrecio(t.id, m)}
-                    className="flex-1"
+                    className="w-44 shrink-0"
                   />
                 </div>
               ))}
             </div>
-          </Field>
+          </Section>
 
-          {/* Costos: productos + mano de obra */}
-          <Field label="Productos (costo interno)">
-            <div className="flex flex-wrap gap-1.5">
-              {productosSel.map((p) => (
-                <Badge key={p.id} variant="secondary" className="gap-1 py-1">
-                  {p.nombre}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onUpdate({
-                        productoIds: item.productoIds.filter((id) => id !== p.id),
-                      })
-                    }
-                    aria-label="Quitar"
-                  >
-                    <X className="size-3" />
-                  </button>
-                </Badge>
-              ))}
+          {/* Productos */}
+          <Section
+            title="Productos"
+            subtitle="En el presupuesto se listan los productos usados (sin cantidad ni costo): solo para que el cliente sepa qué se aplicó."
+          >
+            <div className="space-y-1.5">
+              {productosSel.length > 0 && (
+                <div className="divide-y divide-border/60 rounded-lg border">
+                  {productosSel.map((p) => {
+                    const cant = item.productoCant?.[p.id] ?? 1
+                    const costoARS = toARS(p.costo, cotizacionUsd) * cant
+                    return (
+                      <div key={p.id} className="flex items-center gap-2 px-3 py-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm">{p.nombre}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {formatMoney(p.costo)} c/u
+                          </div>
+                        </div>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          step="0.01"
+                          value={cant}
+                          onChange={(e) =>
+                            onUpdate({
+                              productoCant: {
+                                ...(item.productoCant || {}),
+                                [p.id]: e.target.value === '' ? 0 : Number(e.target.value),
+                              },
+                            })
+                          }
+                          className="h-8 w-16 text-right"
+                          aria-label={`Cantidad de ${p.nombre}`}
+                        />
+                        <span className="w-20 shrink-0 text-right text-sm tabular-nums">
+                          {formatARS(costoARS)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const { [p.id]: _, ...restCant } = item.productoCant || {}
+                            onUpdate({
+                              productoIds: item.productoIds.filter((id) => id !== p.id),
+                              productoCant: restCant,
+                            })
+                          }}
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          aria-label={`Quitar ${p.nombre}`}
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                  <div className="flex items-center justify-between px-3 py-2 text-sm">
+                    <span className="font-medium">Costo estimado en productos</span>
+                    <span className="font-semibold tabular-nums">
+                      {formatARS(
+                        productosSel.reduce(
+                          (s, p) =>
+                            s + toARS(p.costo, cotizacionUsd) * (item.productoCant?.[p.id] ?? 1),
+                          0
+                        )
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {productosDisp.length > 0 && (
+                <ProductoPicker
+                  productos={productosDisp}
+                  onSelect={(pid) =>
+                    onUpdate({ productoIds: [...(item.productoIds || []), pid] })
+                  }
+                />
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                Cantidad y costo son internos (para calcular tu costo). 1 = envase entero.
+              </p>
             </div>
-            {productosDisp.length > 0 && (
-              <ProductoPicker
-                productos={productosDisp}
-                onSelect={(pid) =>
-                  onUpdate({ productoIds: [...(item.productoIds || []), pid] })
-                }
-              />
-            )}
-          </Field>
-
-          <Field label="Mano de obra (costo interno)">
-            <MoneyInput
-              value={item.manoObra}
-              onChange={(manoObra) => onUpdate({ manoObra })}
-              className="w-44"
-            />
-          </Field>
+          </Section>
 
           {/* Opciones / variantes */}
-          <Field label="Opciones / variantes">
+          <Section title="Opciones / variantes">
             <OptionsEditor
               opciones={item.opciones || []}
               onChange={(opciones) => onUpdate({ opciones })}
             />
-          </Field>
+          </Section>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-destructive"
-            onClick={onRemove}
-          >
-            <Trash2 className="size-4" /> Eliminar ítem
-          </Button>
+          <div className="mt-4 border-t pt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              onClick={onRemove}
+            >
+              <Trash2 className="size-4" /> Eliminar ítem
+            </Button>
+          </div>
         </div>
       </CollapsibleContent>
     </Collapsible>
   )
 }
 
-export function ItemsSettings() {
+export function ServiciosSettings() {
   const items = useStore((s) => s.items)
   const categorias = useStore((s) => s.categorias)
   const tiposAuto = useStore((s) => s.tiposAuto)
   const productos = useStore((s) => s.productos)
+  const cotizacionUsd = useStore((s) => s.config.cotizacionUsd)
   const addItem = useStore((s) => s.addItem)
   const updateItem = useStore((s) => s.updateItem)
   const removeItem = useStore((s) => s.removeItem)
 
-  const paquetes = useStore((s) => s.paquetes)
-  const addPaquete = useStore((s) => s.addPaquete)
-  const updatePaquete = useStore((s) => s.updatePaquete)
-  const removePaquete = useStore((s) => s.removePaquete)
+  const addCategoria = useStore((s) => s.addCategoria)
+  const updateCategoria = useStore((s) => s.updateCategoria)
+  const removeCategoria = useStore((s) => s.removeCategoria)
+  const moveCategoria = useStore((s) => s.moveCategoria)
+
+  const [query, setQuery] = useState('')
+  const [openCats, setOpenCats] = useState({})
+  const [newItemId, setNewItemId] = useState(null)
+  const toggleCat = (id) => setOpenCats((prev) => ({ ...prev, [id]: !prev[id] }))
+
+  const addServicio = (catId) => {
+    setQuery('')
+    setOpenCats((prev) => ({ ...prev, [catId ?? 'sin-categoria']: true }))
+    const id = addItem({ titulo: 'Nuevo servicio', categoriaId: catId })
+    setNewItemId(id)
+  }
 
   const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden)
-  const itemsOrdenados = [...items].sort((a, b) => {
+  const q = query.trim().toLowerCase()
+  const itemsFiltrados = q
+    ? items.filter((it) => it.titulo?.toLowerCase().includes(q))
+    : items
+  const itemsOrdenados = [...itemsFiltrados].sort((a, b) => {
     const ca = categorias.find((c) => c.id === a.categoriaId)?.orden ?? 99
     const cb = categorias.find((c) => c.id === b.categoriaId)?.orden ?? 99
     return ca - cb
@@ -516,84 +599,49 @@ export function ItemsSettings() {
 
   return (
     <div className="space-y-6">
+      {/* Categorías de servicio */}
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Ítems de servicio</h3>
-        <div className="space-y-2">
-          {itemsOrdenados.map((item) => (
-            <ItemEditor
-              key={item.id}
-              item={item}
-              categorias={categoriasOrdenadas}
-              tiposAuto={tiposAuto}
-              productos={productos}
-              onUpdate={(patch) => updateItem(item.id, patch)}
-              onRemove={() => removeItem(item.id)}
-            />
-          ))}
+        <div className="mb-2">
+          <h3 className="text-sm font-semibold">Categorías de servicio</h3>
+          <p className="text-xs text-muted-foreground">Ordená con las flechas.</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          onClick={() =>
-            addItem({
-              titulo: 'Nuevo ítem',
-              categoriaId: categoriasOrdenadas[0]?.id || null,
-            })
-          }
-        >
-          <Plus className="size-4" /> Agregar ítem
-        </Button>
-      </div>
-
-      {/* Paquetes */}
-      <div className="border-t pt-4">
-        <h3 className="mb-2 text-sm font-semibold">Paquetes / combos</h3>
-        <div className="space-y-3">
-          {paquetes.map((paq) => (
-            <div key={paq.id} className="rounded-lg border p-2">
-              <div className="flex items-center gap-2">
-                <Input
-                  value={paq.nombre}
-                  onChange={(e) => updatePaquete(paq.id, { nombre: e.target.value })}
-                  className="h-8 flex-1"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 text-muted-foreground hover:text-destructive"
-                  onClick={() => removePaquete(paq.id)}
-                  aria-label="Eliminar paquete"
+        <div className="space-y-2">
+          {categoriasOrdenadas.map((c, i) => (
+            <div key={c.id} className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  onClick={() => moveCategoria(c.id, 'up')}
+                  disabled={i === 0}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  aria-label="Subir"
                 >
-                  <Trash2 className="size-4" />
-                </Button>
+                  <ChevronUp className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveCategoria(c.id, 'down')}
+                  disabled={i === categoriasOrdenadas.length - 1}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                  aria-label="Bajar"
+                >
+                  <ChevronDown className="size-4" />
+                </button>
               </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {itemsOrdenados.map((it) => {
-                  const active = (paq.itemIds || []).includes(it.id)
-                  return (
-                    <button
-                      key={it.id}
-                      type="button"
-                      onClick={() =>
-                        updatePaquete(paq.id, {
-                          itemIds: active
-                            ? paq.itemIds.filter((x) => x !== it.id)
-                            : [...(paq.itemIds || []), it.id],
-                        })
-                      }
-                      className={cn(
-                        'rounded-full border px-2.5 py-1 text-xs',
-                        active
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-input hover:bg-accent'
-                      )}
-                    >
-                      {it.titulo}
-                    </button>
-                  )
-                })}
-              </div>
+              <Input
+                value={c.nombre}
+                onChange={(e) => updateCategoria(c.id, { nombre: e.target.value })}
+                className="flex-1"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => removeCategoria(c.id)}
+                aria-label="Eliminar categoría"
+              >
+                <Trash2 className="size-4" />
+              </Button>
             </div>
           ))}
         </div>
@@ -601,10 +649,87 @@ export function ItemsSettings() {
           variant="outline"
           size="sm"
           className="mt-2"
-          onClick={() => addPaquete({ nombre: 'Nuevo paquete' })}
+          onClick={() => addCategoria('Nueva categoría')}
         >
-          <Plus className="size-4" /> Agregar paquete
+          <Plus className="size-4" /> Agregar categoría
         </Button>
+      </div>
+
+      <div className="border-t pt-4">
+        <h3 className="mb-2 text-sm font-semibold">Servicios individuales</h3>
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="items-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar ítem..."
+            className="pl-9"
+          />
+        </div>
+        <div className="space-y-2">
+          {[...categoriasOrdenadas, { id: null, nombre: 'Sin categoría' }].map((cat) => {
+            const itemsCat = itemsOrdenados.filter((it) =>
+              cat.id === null
+                ? !categorias.some((c) => c.id === it.categoriaId)
+                : it.categoriaId === cat.id
+            )
+            const isSinCat = cat.id === null
+            if (itemsCat.length === 0 && (q || isSinCat)) return null
+            const catKey = cat.id ?? 'sin-categoria'
+            const open = q ? true : !!openCats[catKey]
+            return (
+              <Collapsible
+                key={catKey}
+                open={open}
+                onOpenChange={() => !q && toggleCat(catKey)}
+              >
+                <div className="flex items-center gap-1">
+                  <CollapsibleTrigger className="group flex min-h-11 flex-1 items-center gap-2 rounded-md px-2 text-left hover:bg-accent active:bg-accent">
+                    <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {cat.nombre}
+                    </span>
+                    <span className="text-xs text-muted-foreground/60">
+                      ({itemsCat.length})
+                    </span>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent className="ml-4 mt-1.5 space-y-2 border-l border-border/60 pl-4">
+                  {itemsCat.map((item) => (
+                    <ItemEditor
+                      key={item.id}
+                      item={item}
+                      categorias={categoriasOrdenadas}
+                      tiposAuto={tiposAuto}
+                      productos={productos}
+                      cotizacionUsd={cotizacionUsd}
+                      defaultOpen={item.id === newItemId}
+                      onUpdate={(patch) => updateItem(item.id, patch)}
+                      onRemove={() => removeItem(item.id)}
+                    />
+                  ))}
+                  {!isSinCat && (
+                    <button
+                      type="button"
+                      onClick={() => addServicio(cat.id)}
+                      aria-label={`Agregar servicio en ${cat.nombre}`}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground active:bg-muted"
+                    >
+                      <Plus className="size-4" />
+                      Agregar servicio
+                    </button>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            )
+          })}
+          {q && itemsOrdenados.length === 0 && (
+            <p className="py-4 text-center text-xs text-muted-foreground">
+              No hay ítems que coincidan.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

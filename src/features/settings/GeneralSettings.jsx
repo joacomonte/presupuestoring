@@ -1,124 +1,84 @@
-import { Trash2, Upload } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { useStore } from '@/store/useStore'
-import { formatARS } from '@/lib/format'
 
 export function GeneralSettings() {
   const config = useStore((s) => s.config)
-  const setCotizacionUsd = useStore((s) => s.setCotizacionUsd)
   const setIvaPct = useStore((s) => s.setIvaPct)
-  const setPaqueteDestacado = useStore((s) => s.setPaqueteDestacado)
-  const paquetes = useStore((s) => s.paquetes)
+  const setFormaPagoDefault = useStore((s) => s.setFormaPagoDefault)
   const local = useStore((s) => s.local)
   const setLocal = useStore((s) => s.setLocal)
-
-  const onLogo = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setLocal({ logo: reader.result })
-    reader.readAsDataURL(file)
-  }
+  const formasPago = useStore((s) => s.formasPago)
+  const addFormaPago = useStore((s) => s.addFormaPago)
+  const updateFormaPago = useStore((s) => s.updateFormaPago)
+  const removeFormaPago = useStore((s) => s.removeFormaPago)
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Cotización USD (ARS por dólar)"
-          htmlFor="set-cotizacion"
-          hint={`1 USD = ${formatARS(config.cotizacionUsd)}`}
-        >
-          <Input
-            id="set-cotizacion"
-            type="number"
-            inputMode="numeric"
-            value={config.cotizacionUsd || ''}
-            onChange={(e) => setCotizacionUsd(e.target.value)}
-          />
-        </Field>
-        <Field label="IVA (%)" htmlFor="set-iva">
-          <Input
-            id="set-iva"
-            type="number"
-            inputMode="numeric"
-            value={config.ivaPct || ''}
-            onChange={(e) => setIvaPct(e.target.value)}
-          />
-        </Field>
-      </div>
-
-      <Field
-        label="Paquete preseleccionado al abrir un presupuesto nuevo"
-        hint="Se carga automáticamente para agilizar (PRD §2.3)."
-      >
-        <Select
-          value={config.paqueteDestacadoId || 'none'}
-          onValueChange={(v) => setPaqueteDestacado(v === 'none' ? null : v)}
-        >
-          <SelectTrigger id="set-destacado" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Ninguno</SelectItem>
-            {paquetes.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.nombre}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <Field label="IVA (%)" htmlFor="set-iva">
+        <Input
+          id="set-iva"
+          type="number"
+          inputMode="numeric"
+          value={config.ivaPct || ''}
+          onChange={(e) => setIvaPct(e.target.value)}
+        />
       </Field>
+
+      <div className="border-t pt-4">
+        <div className="mb-3 text-sm font-medium">Formas de pago</div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Marcá con el badge la forma de pago preseleccionada al abrir un presupuesto nuevo.
+        </p>
+        <div className="space-y-2">
+          {formasPago.map((f) => {
+            const isDefault = config.formaPagoDefaultId === f.id
+            return (
+              <div key={f.id} className="flex items-center gap-2">
+                <Input
+                  value={f.nombre}
+                  onChange={(e) => updateFormaPago(f.id, { nombre: e.target.value })}
+                  className="flex-1"
+                />
+                <Badge asChild variant={isDefault ? 'default' : 'outline'}>
+                  <button
+                    type="button"
+                    onClick={() => setFormaPagoDefault(isDefault ? null : f.id)}
+                    aria-pressed={isDefault}
+                    className={`shrink-0 cursor-pointer ${isDefault ? '' : 'text-muted-foreground'}`}
+                  >
+                    Default
+                  </button>
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeFormaPago(f.id)}
+                  aria-label="Eliminar forma de pago"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          onClick={() => addFormaPago('Nueva forma')}
+        >
+          <Plus className="size-4" /> Agregar
+        </Button>
+      </div>
 
       <div className="border-t pt-4">
         <div className="mb-3 text-sm font-medium">Datos del local (encabezado del detalle)</div>
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            {local.logo ? (
-              <img
-                src={local.logo}
-                alt="Logo"
-                className="size-16 rounded-lg border object-contain"
-              />
-            ) : (
-              <div className="flex size-16 items-center justify-center rounded-lg border bg-muted text-xl font-bold text-muted-foreground">
-                {(local.nombre || 'D').slice(0, 1)}
-              </div>
-            )}
-            <div className="flex flex-col gap-2">
-              <Button asChild variant="outline" size="sm">
-                <label htmlFor="set-logo" className="cursor-pointer">
-                  <Upload className="size-4" /> Subir logo
-                  <input
-                    id="set-logo"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={onLogo}
-                  />
-                </label>
-              </Button>
-              {local.logo && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive"
-                  onClick={() => setLocal({ logo: null })}
-                >
-                  <Trash2 className="size-4" /> Quitar
-                </Button>
-              )}
-            </div>
-          </div>
-
           <Field label="Nombre del local" htmlFor="set-nombre">
             <Input
               id="set-nombre"

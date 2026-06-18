@@ -71,7 +71,7 @@ export function repriceItem(item, tipoAutoId, ctx) {
 
 // Crea un presupuesto borrador con defaults (sin N°: se asigna al guardar).
 export function createDraft(state) {
-  const { config, paquetes, items, tiposAuto, productos, categorias } = state
+  const { config, paquetes, items, tiposAuto, productos, categorias, formasPago } = state
   const ctx = { tiposAuto, productos, items, categorias }
 
   // Preselecciona el paquete destacado (más vendido).
@@ -104,7 +104,8 @@ export function createDraft(state) {
     },
     items: draftItems,
     tiempoEstimado: '',
-    formaPago: '',
+    formaPago:
+      (formasPago || []).find((f) => f.id === config.formaPagoDefaultId)?.nombre ?? '',
     garantia: '',
     observaciones: '',
     ivaActivo: false,

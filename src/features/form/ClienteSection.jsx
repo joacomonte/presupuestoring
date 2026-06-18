@@ -10,7 +10,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 
-export function ClienteSection({ cliente, onChange, open, onOpenChange }) {
+export function ClienteSection({ cliente, onChange, open, onOpenChange, plain }) {
   const [factOpen, setFactOpen] = useState(!!cliente.facturacion)
   const summary = cliente.nombre || cliente.telefono || null
 
@@ -22,6 +22,7 @@ export function ClienteSection({ cliente, onChange, open, onOpenChange }) {
       summary={summary}
       open={open}
       onOpenChange={onOpenChange}
+      plain={plain}
     >
       <div className="space-y-3">
         <Field label="Nombre / Razón social" htmlFor="cli-nombre">

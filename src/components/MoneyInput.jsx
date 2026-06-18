@@ -25,8 +25,8 @@ export function MoneyInput({
             className={cn(
               'px-2 text-xs font-semibold transition disabled:opacity-100',
               money.moneda === m
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background text-muted-foreground hover:bg-accent'
+                ? 'bg-secondary text-secondary-foreground'
+                : 'bg-background text-muted-foreground/60 hover:bg-accent'
             )}
           >
             {m}

@@ -1,4 +1,5 @@
-import { Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Plus, Search, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { MoneyInput } from '@/components/MoneyInput'
@@ -24,13 +25,34 @@ export function ProductosSettings() {
   const updateProducto = useStore((s) => s.updateProducto)
   const removeProducto = useStore((s) => s.removeProducto)
 
+  const [query, setQuery] = useState('')
+
+  const filtrados = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return productos
+    return productos.filter(
+      (p) =>
+        p.nombre?.toLowerCase().includes(q) || p.marca?.toLowerCase().includes(q),
+    )
+  }, [productos, query])
+
   return (
     <div>
       <p className="mb-3 text-xs text-muted-foreground">
         Costo interno reutilizable en los ítems.
       </p>
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          id="productos-search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar producto..."
+          className="pl-9"
+        />
+      </div>
       <div className="space-y-3">
-        {productos.map((p) => (
+        {filtrados.map((p) => (
           <div key={p.id} className="rounded-lg border p-2">
             <div className="flex items-center gap-2">
               <Input
@@ -56,6 +78,11 @@ export function ProductosSettings() {
             </div>
           </div>
         ))}
+        {filtrados.length === 0 && (
+          <p className="py-4 text-center text-xs text-muted-foreground">
+            No hay productos que coincidan.
+          </p>
+        )}
       </div>
       <Button
         variant="outline"

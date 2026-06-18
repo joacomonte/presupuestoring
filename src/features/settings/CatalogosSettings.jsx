@@ -1,7 +1,47 @@
-import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react'
+import { createElement } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover'
+import { VEHICLE_ICONS, getVehicleIcon } from '@/lib/vehicleIcons'
 import { useStore } from '@/store/useStore'
+
+function IconPicker({ value, onChange }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-9 shrink-0"
+          aria-label="Elegir icono"
+        >
+          {createElement(getVehicleIcon(value), { className: 'size-4' })}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-2">
+        <div className="grid grid-cols-5 gap-1">
+          {Object.entries(VEHICLE_ICONS).map(([key, Icon]) => (
+            <Button
+              key={key}
+              variant={key === value ? 'secondary' : 'ghost'}
+              size="icon"
+              className="size-9"
+              onClick={() => onChange(key)}
+              aria-label={`Icono ${key}`}
+            >
+              <Icon className="size-4" />
+            </Button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 function Bloque({ title, hint, children }) {
   return (
@@ -35,29 +75,20 @@ export function CatalogosSettings() {
   const updateTipoAuto = useStore((s) => s.updateTipoAuto)
   const removeTipoAuto = useStore((s) => s.removeTipoAuto)
 
-  const formasPago = useStore((s) => s.formasPago)
-  const addFormaPago = useStore((s) => s.addFormaPago)
-  const updateFormaPago = useStore((s) => s.updateFormaPago)
-  const removeFormaPago = useStore((s) => s.removeFormaPago)
-
-  const categorias = useStore((s) => s.categorias)
-  const addCategoria = useStore((s) => s.addCategoria)
-  const updateCategoria = useStore((s) => s.updateCategoria)
-  const removeCategoria = useStore((s) => s.removeCategoria)
-  const moveCategoria = useStore((s) => s.moveCategoria)
-
-  const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden)
-
   return (
     <div className="space-y-6">
-      {/* Tipos de auto */}
+      {/* Tipos de vehículos */}
       <Bloque
-        title="Tipos de auto"
+        title="Tipos de vehículos"
         hint="El multiplicador deriva precios de tipos sin valor explícito en la matriz."
       >
         <div className="space-y-2">
           {tiposAuto.map((t) => (
             <div key={t.id} className="flex items-center gap-2">
+              <IconPicker
+                value={t.icono}
+                onChange={(icono) => updateTipoAuto(t.id, { icono })}
+              />
               <Input
                 value={t.nombre}
                 onChange={(e) => updateTipoAuto(t.id, { nombre: e.target.value })}
@@ -85,74 +116,6 @@ export function CatalogosSettings() {
           onClick={() => addTipoAuto('Nuevo tipo', 1)}
         >
           <Plus className="size-4" /> Agregar tipo
-        </Button>
-      </Bloque>
-
-      {/* Formas de pago */}
-      <Bloque title="Formas de pago">
-        <div className="space-y-2">
-          {formasPago.map((f) => (
-            <div key={f.id} className="flex items-center gap-2">
-              <Input
-                value={f.nombre}
-                onChange={(e) => updateFormaPago(f.id, { nombre: e.target.value })}
-                className="flex-1"
-              />
-              <FilaDelete onDelete={() => removeFormaPago(f.id)} />
-            </div>
-          ))}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          onClick={() => addFormaPago('Nueva forma')}
-        >
-          <Plus className="size-4" /> Agregar
-        </Button>
-      </Bloque>
-
-      {/* Categorías */}
-      <Bloque title="Categorías de servicio" hint="Ordená con las flechas.">
-        <div className="space-y-2">
-          {categoriasOrdenadas.map((c, i) => (
-            <div key={c.id} className="flex items-center gap-2">
-              <div className="flex flex-col">
-                <button
-                  type="button"
-                  onClick={() => moveCategoria(c.id, 'up')}
-                  disabled={i === 0}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  aria-label="Subir"
-                >
-                  <ChevronUp className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveCategoria(c.id, 'down')}
-                  disabled={i === categoriasOrdenadas.length - 1}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  aria-label="Bajar"
-                >
-                  <ChevronDown className="size-4" />
-                </button>
-              </div>
-              <Input
-                value={c.nombre}
-                onChange={(e) => updateCategoria(c.id, { nombre: e.target.value })}
-                className="flex-1"
-              />
-              <FilaDelete onDelete={() => removeCategoria(c.id)} />
-            </div>
-          ))}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          onClick={() => addCategoria('Nueva categoría')}
-        >
-          <Plus className="size-4" /> Agregar categoría
         </Button>
       </Bloque>
     </div>

@@ -12,11 +12,11 @@ const dPct = (pct) => ({ modo: 'pct', pct })
 
 // Tipos de auto con multiplicador sobre el precio base (Mediano).
 const TIPOS_AUTO = [
-  { id: 'chico', nombre: 'Chico', multiplicador: 0.85 },
-  { id: 'mediano', nombre: 'Mediano', multiplicador: 1.0, base: true },
-  { id: 'suv', nombre: 'SUV', multiplicador: 1.25 },
-  { id: 'pickup', nombre: 'Pickup', multiplicador: 1.3 },
-  { id: 'premium', nombre: 'Premium / Alta gama', multiplicador: 1.5 },
+  { id: 'chico', nombre: 'Chico', multiplicador: 0.85, icono: 'car' },
+  { id: 'mediano', nombre: 'Mediano', multiplicador: 1.0, base: true, icono: 'car-front' },
+  { id: 'suv', nombre: 'SUV', multiplicador: 1.25, icono: 'truck' },
+  { id: 'pickup', nombre: 'Pickup', multiplicador: 1.3, icono: 'truck' },
+  { id: 'premium', nombre: 'Premium / Alta gama', multiplicador: 1.5, icono: 'car-taxi' },
 ]
 
 // Construye la matriz de precios por tipo de auto a partir de un precio base (Mediano).
@@ -35,6 +35,7 @@ export function buildSeed() {
     cotizacionUsd: 1200,
     ivaPct: IVA_DEFAULT,
     paqueteDestacadoId: 'lavado-premium',
+    formaPagoDefaultId: null,
   }
 
   const local = {

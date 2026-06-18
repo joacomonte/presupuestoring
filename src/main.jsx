@@ -7,6 +7,6 @@ import { Toaster } from '@/components/ui/sonner'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-    <Toaster richColors position="top-center" />
+    <Toaster richColors closeButton position="top-center" duration={3000} />
   </StrictMode>,
 )

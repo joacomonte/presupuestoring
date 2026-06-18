@@ -12,6 +12,7 @@ export function VehiculoSection({
   onAddTipoAuto,
   open,
   onOpenChange,
+  plain,
 }) {
   const tipo = tiposAuto.find((t) => t.id === vehiculo.tipoAutoId)
   const summary =
@@ -25,6 +26,7 @@ export function VehiculoSection({
       summary={summary}
       open={open}
       onOpenChange={onOpenChange}
+      plain={plain}
     >
       <div className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -47,7 +49,7 @@ export function VehiculoSection({
         </div>
 
         <Field
-          label="Tipo de auto"
+          label="Tipo de vehículo"
           hint="Precarga los precios de cada ítem según la matriz."
         >
           <InlineCombobox
@@ -56,7 +58,7 @@ export function VehiculoSection({
             value={vehiculo.tipoAutoId}
             onChange={(tipoAutoId) => onChange({ tipoAutoId })}
             onAdd={onAddTipoAuto}
-            placeholder="Elegir tipo de auto…"
+            placeholder="Elegir tipo de vehículo…"
           />
         </Field>
 

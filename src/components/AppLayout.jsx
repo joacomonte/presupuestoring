@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/Logo'
+import { DolarButton } from '@/components/DolarButton'
 import { useStore } from '@/store/useStore'
 import { cn } from '@/lib/utils'
 
@@ -27,6 +28,8 @@ export function AppLayout() {
           </Link>
 
           <div className="flex-1" />
+
+          <DolarButton />
 
           {!inForm && (
             <Button asChild size="sm" id="btn-nuevo-header">

@@ -21,6 +21,7 @@ export function CierreSection({
   totals,
   open,
   onOpenChange,
+  plain,
 }) {
   const summary =
     [
@@ -42,6 +43,7 @@ export function CierreSection({
       summary={summary}
       open={open}
       onOpenChange={onOpenChange}
+      plain={plain}
     >
       <div className="space-y-4">
         <Field label="Forma de pago">

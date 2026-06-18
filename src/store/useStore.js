@@ -43,6 +43,8 @@ export const useStore = create(
         set((s) => ({ config: { ...s.config, ivaPct: Number(v) || 0 } })),
       setPaqueteDestacado: (id) =>
         set((s) => ({ config: { ...s.config, paqueteDestacadoId: id } })),
+      setFormaPagoDefault: (id) =>
+        set((s) => ({ config: { ...s.config, formaPagoDefaultId: id } })),
       setLocal: (patch) => set((s) => ({ local: { ...s.local, ...patch } })),
 
       // ---------------- Tipos de auto ----------------
@@ -51,7 +53,7 @@ export const useStore = create(
         set((s) => ({
           tiposAuto: [
             ...s.tiposAuto,
-            { id, nombre, multiplicador: Number(multiplicador) || 1 },
+            { id, nombre, multiplicador: Number(multiplicador) || 1, icono: 'car' },
           ],
         }))
         return id
@@ -177,6 +179,15 @@ export const useStore = create(
         })),
       removePaquete: (id) =>
         set((s) => ({ paquetes: s.paquetes.filter((p) => p.id !== id) })),
+      movePaquete: (id, dir) =>
+        set((s) => {
+          const ordered = [...s.paquetes]
+          const i = ordered.findIndex((p) => p.id === id)
+          const j = dir === 'up' ? i - 1 : i + 1
+          if (i < 0 || j < 0 || j >= ordered.length) return {}
+          ;[ordered[i], ordered[j]] = [ordered[j], ordered[i]]
+          return { paquetes: ordered }
+        }),
 
       // ---------------- Actualización masiva de precios ----------------
       // Escala precios de venta (matriz), deltas (monto) y precios unitarios.

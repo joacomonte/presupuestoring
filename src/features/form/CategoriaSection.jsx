@@ -19,6 +19,7 @@ export function CategoriaSection({
   onAddBlank,
   open,
   onOpenChange,
+  plain,
 }) {
   const incluidos = draftItems
   const incluidosCatalogoIds = new Set(
@@ -40,6 +41,7 @@ export function CategoriaSection({
       summary={summary}
       open={open}
       onOpenChange={onOpenChange}
+      plain={plain}
       badge={
         incluidos.length > 0 ? (
           <Badge variant="secondary" className="tabular-nums">
