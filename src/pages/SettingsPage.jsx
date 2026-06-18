@@ -130,17 +130,20 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 pb-28 pt-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Configuraciones</h1>
+      <div className="relative mb-3 flex items-center">
         <Button
           variant="ghost"
           size="sm"
+          className="-ml-2"
           onClick={() => navigate('/')}
           aria-label="Volver a presupuestos"
         >
           <ChevronLeft className="size-4" />
-          Volver a presupuestos
+          Volver
         </Button>
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-lg font-semibold">
+          Configuraciones
+        </h1>
       </div>
 
       <Tabs defaultValue="vehiculos">
