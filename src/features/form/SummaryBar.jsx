@@ -180,7 +180,7 @@ export function SummaryBar({
           )}
 
           {/* Barra compacta */}
-          <div className="flex items-stretch gap-2 rounded-2xl border bg-background p-2 shadow-lg">
+          <div className="flex items-center gap-2 rounded-2xl border bg-background p-2 shadow-lg">
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}

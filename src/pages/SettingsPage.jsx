@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowLeft,
   Boxes,
   ChevronLeft,
   ChevronRight,
@@ -30,11 +29,41 @@ function OtrosSettings() {
 }
 
 const TABS = [
-  { value: 'vehiculos', icon: ListTree, label: 'Vehículos', Content: CatalogosSettings },
-  { value: 'paquetes', icon: Layers, label: 'Paquetes', Content: PaquetesSettings },
-  { value: 'servicios', icon: Boxes, label: 'Servicios', Content: ServiciosSettings },
-  { value: 'productos', icon: Package, label: 'Productos', Content: ProductosSettings },
-  { value: 'otros', icon: SlidersHorizontal, label: 'Otros', Content: OtrosSettings },
+  {
+    value: 'vehiculos',
+    icon: ListTree,
+    label: 'Vehículos',
+    desc: 'Definí los tipos de vehículo y cuánto encarece cada uno. El multiplicador ajusta los precios de los servicios para los tipos que no tienen un valor cargado a mano.',
+    Content: CatalogosSettings,
+  },
+  {
+    value: 'paquetes',
+    icon: Layers,
+    label: 'Paquetes',
+    desc: 'Armá combos de servicios que se precargan juntos al crear un presupuesto. Marcá uno como Default para que aparezca elegido por defecto.',
+    Content: PaquetesSettings,
+  },
+  {
+    value: 'servicios',
+    icon: Boxes,
+    label: 'Servicios',
+    desc: 'Tu catálogo de servicios con el precio por tipo de vehículo. Agrupalos en categorías y sumales los productos y variantes que correspondan.',
+    Content: ServiciosSettings,
+  },
+  {
+    value: 'productos',
+    icon: Package,
+    label: 'Productos',
+    desc: 'Insumos con su costo interno. Se asocian a los servicios para calcular tu costo y se listan en el presupuesto para que el cliente sepa qué se aplicó.',
+    Content: ProductosSettings,
+  },
+  {
+    value: 'otros',
+    icon: SlidersHorizontal,
+    label: 'Otros',
+    desc: 'Ajustes generales: IVA, formas de pago, datos de tu local y manejo de la información guardada.',
+    Content: OtrosSettings,
+  },
 ]
 
 // Lista de tabs con scroll horizontal y flechas que aparecen según haya más contenido a cada lado.
@@ -101,11 +130,17 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-xl px-4 pb-28 pt-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label="Volver">
-          <ArrowLeft className="size-5" />
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h1 className="text-lg font-semibold">Configuraciones</h1>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/')}
+          aria-label="Volver a presupuestos"
+        >
+          <ChevronLeft className="size-4" />
+          Volver a presupuestos
         </Button>
-        <h1 className="text-lg font-semibold">Ajustes</h1>
       </div>
 
       <Tabs defaultValue="vehiculos">
@@ -120,8 +155,11 @@ export function SettingsPage() {
           </TabsList>
         </TabScroller>
 
-        {TABS.map(({ value, Content }) => (
+        {TABS.map(({ value, desc, Content }) => (
           <TabsContent key={value} value={value} className="pt-4">
+            {desc && (
+              <p className="mb-4 text-sm text-muted-foreground">{desc}</p>
+            )}
             <Content />
           </TabsContent>
         ))}

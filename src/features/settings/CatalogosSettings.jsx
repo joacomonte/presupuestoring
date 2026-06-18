@@ -1,5 +1,21 @@
 import { createElement } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { GripVertical, Plus, Trash2 } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -69,11 +85,66 @@ function FilaDelete({ onDelete }) {
   )
 }
 
+function SortableTipo({ tipo, onUpdate, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: tipo.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <button
+        type="button"
+        className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
+        aria-label="Reordenar"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <IconPicker value={tipo.icono} onChange={(icono) => onUpdate({ icono })} />
+      <Input
+        value={tipo.nombre}
+        onChange={(e) => onUpdate({ nombre: e.target.value })}
+        placeholder="Nombre"
+        className="flex-1"
+      />
+      <Input
+        type="number"
+        step="0.05"
+        value={tipo.multiplicador}
+        onChange={(e) => onUpdate({ multiplicador: Number(e.target.value) || 0 })}
+        className="w-20"
+        aria-label="Multiplicador"
+      />
+      <FilaDelete onDelete={onDelete} />
+    </div>
+  )
+}
+
 export function CatalogosSettings() {
   const tiposAuto = useStore((s) => s.tiposAuto)
   const addTipoAuto = useStore((s) => s.addTipoAuto)
   const updateTipoAuto = useStore((s) => s.updateTipoAuto)
   const removeTipoAuto = useStore((s) => s.removeTipoAuto)
+  const reorderTiposAuto = useStore((s) => s.reorderTiposAuto)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragEnd = ({ active, over }) => {
+    if (!over || active.id === over.id) return
+    const ids = tiposAuto.map((t) => t.id)
+    const oldIndex = ids.indexOf(active.id)
+    const newIndex = ids.indexOf(over.id)
+    reorderTiposAuto(arrayMove(ids, oldIndex, newIndex))
+  }
 
   return (
     <div className="space-y-6">
@@ -82,33 +153,27 @@ export function CatalogosSettings() {
         title="Tipos de vehículos"
         hint="El multiplicador deriva precios de tipos sin valor explícito en la matriz."
       >
-        <div className="space-y-2">
-          {tiposAuto.map((t) => (
-            <div key={t.id} className="flex items-center gap-2">
-              <IconPicker
-                value={t.icono}
-                onChange={(icono) => updateTipoAuto(t.id, { icono })}
-              />
-              <Input
-                value={t.nombre}
-                onChange={(e) => updateTipoAuto(t.id, { nombre: e.target.value })}
-                placeholder="Nombre"
-                className="flex-1"
-              />
-              <Input
-                type="number"
-                step="0.05"
-                value={t.multiplicador}
-                onChange={(e) =>
-                  updateTipoAuto(t.id, { multiplicador: Number(e.target.value) || 0 })
-                }
-                className="w-20"
-                aria-label="Multiplicador"
-              />
-              <FilaDelete onDelete={() => removeTipoAuto(t.id)} />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={tiposAuto.map((t) => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {tiposAuto.map((t) => (
+                <SortableTipo
+                  key={t.id}
+                  tipo={t}
+                  onUpdate={(patch) => updateTipoAuto(t.id, patch)}
+                  onDelete={() => removeTipoAuto(t.id)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
         <Button
           variant="outline"
           size="sm"

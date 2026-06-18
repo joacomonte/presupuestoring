@@ -38,9 +38,6 @@ export function ProductosSettings() {
 
   return (
     <div>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Costo interno reutilizable en los ítems.
-      </p>
       <div className="relative mb-3">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -73,7 +70,7 @@ export function ProductosSettings() {
               <MoneyInput
                 value={p.costo}
                 onChange={(costo) => updateProducto(p.id, { costo })}
-                className="w-40"
+                className="w-44"
               />
             </div>
           </div>

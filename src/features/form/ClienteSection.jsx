@@ -34,7 +34,7 @@ export function ClienteSection({ cliente, onChange, open, onOpenChange, plain })
               placeholder="Ej. Juan Pérez"
             />
           </Field>
-          <Field label="Apodo" htmlFor="cli-apodo" hint="Para buscar rápido">
+          <Field label="Apodo" htmlFor="cli-apodo" hint="(Interno para buscar rapido)">
             <Input
               id="cli-apodo"
               value={cliente.apodo || ''}
@@ -51,7 +51,7 @@ export function ClienteSection({ cliente, onChange, open, onOpenChange, plain })
               inputMode="tel"
               value={cliente.telefono}
               onChange={(e) => onChange({ telefono: e.target.value })}
-              placeholder="+54 9 11 ..."
+              placeholder="Opcional"
             />
           </Field>
           <Field label="Email" htmlFor="cli-email">
@@ -60,7 +60,7 @@ export function ClienteSection({ cliente, onChange, open, onOpenChange, plain })
               type="email"
               value={cliente.email}
               onChange={(e) => onChange({ email: e.target.value })}
-              placeholder="cliente@email.com"
+              placeholder="Opcional"
             />
           </Field>
         </div>

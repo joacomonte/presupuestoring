@@ -167,7 +167,7 @@ export function ItemCard({ item, cotizacionUsd, productosCatalogo, onChange, onR
           id={`precio-${item.id}`}
           value={item.precioVenta}
           onChange={(precioVenta) => onChange({ precioVenta })}
-          className="w-44"
+          className="min-w-0 flex-1"
         />
       </div>
 
@@ -281,7 +281,7 @@ export function ItemCard({ item, cotizacionUsd, productosCatalogo, onChange, onR
               <MoneyInput
                 value={item.manoObra}
                 onChange={(manoObra) => onChange({ manoObra })}
-                className="w-44"
+                className="w-full"
               />
             </Field>
 

@@ -1,5 +1,21 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Plus, Search, Trash2, X } from 'lucide-react'
+import { ChevronDown, GripVertical, Plus, Search, Trash2, X } from 'lucide-react'
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Input } from '@/components/ui/input'
 import {
   Command,
@@ -303,7 +319,7 @@ function OptionsEditor({ opciones, onChange }) {
                 <MoneyInput
                   value={op.precioUnitario}
                   onChange={(precioUnitario) => updateOp(op.id, { precioUnitario })}
-                  className="w-32"
+                  className="w-44"
                 />
               </div>
               <div className="flex items-center gap-1.5">
@@ -444,7 +460,7 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
                   <MoneyInput
                     value={item.precios?.[t.id] || { valor: 0, moneda: 'ARS' }}
                     onChange={(m) => setPrecio(t.id, m)}
-                    className="w-44 shrink-0"
+                    className="min-w-0 flex-1"
                   />
                 </div>
               ))}
@@ -564,6 +580,45 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
   )
 }
 
+function SortableCategoria({ cat, onUpdate, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: cat.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : undefined,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <button
+        type="button"
+        className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
+        aria-label="Reordenar categoría"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <Input
+        value={cat.nombre}
+        onChange={(e) => onUpdate({ nombre: e.target.value })}
+        className="flex-1"
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+        onClick={onDelete}
+        aria-label="Eliminar categoría"
+      >
+        <Trash2 className="size-4" />
+      </Button>
+    </div>
+  )
+}
+
 export function ServiciosSettings() {
   const items = useStore((s) => s.items)
   const categorias = useStore((s) => s.categorias)
@@ -577,7 +632,12 @@ export function ServiciosSettings() {
   const addCategoria = useStore((s) => s.addCategoria)
   const updateCategoria = useStore((s) => s.updateCategoria)
   const removeCategoria = useStore((s) => s.removeCategoria)
-  const moveCategoria = useStore((s) => s.moveCategoria)
+  const reorderCategorias = useStore((s) => s.reorderCategorias)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
 
   const [query, setQuery] = useState('')
   const [openCats, setOpenCats] = useState({})
@@ -592,6 +652,15 @@ export function ServiciosSettings() {
   }
 
   const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden)
+
+  const handleDragEnd = ({ active, over }) => {
+    if (!over || active.id === over.id) return
+    const ids = categoriasOrdenadas.map((c) => c.id)
+    const oldIndex = ids.indexOf(active.id)
+    const newIndex = ids.indexOf(over.id)
+    reorderCategorias(arrayMove(ids, oldIndex, newIndex))
+  }
+
   const q = query.trim().toLowerCase()
   const itemsFiltrados = q
     ? items.filter((it) => it.titulo?.toLowerCase().includes(q))
@@ -608,48 +677,29 @@ export function ServiciosSettings() {
       <div>
         <div className="mb-2">
           <h3 className="text-sm font-semibold">Categorías de servicio</h3>
-          <p className="text-xs text-muted-foreground">Ordená con las flechas.</p>
+          <p className="text-xs text-muted-foreground">Arrastrá para ordenar.</p>
         </div>
-        <div className="space-y-2">
-          {categoriasOrdenadas.map((c, i) => (
-            <div key={c.id} className="flex items-center gap-2">
-              <div className="flex flex-col">
-                <button
-                  type="button"
-                  onClick={() => moveCategoria(c.id, 'up')}
-                  disabled={i === 0}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  aria-label="Subir"
-                >
-                  <ChevronUp className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveCategoria(c.id, 'down')}
-                  disabled={i === categoriasOrdenadas.length - 1}
-                  className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                  aria-label="Bajar"
-                >
-                  <ChevronDown className="size-4" />
-                </button>
-              </div>
-              <Input
-                value={c.nombre}
-                onChange={(e) => updateCategoria(c.id, { nombre: e.target.value })}
-                className="flex-1"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => removeCategoria(c.id)}
-                aria-label="Eliminar categoría"
-              >
-                <Trash2 className="size-4" />
-              </Button>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={categoriasOrdenadas.map((c) => c.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {categoriasOrdenadas.map((c) => (
+                <SortableCategoria
+                  key={c.id}
+                  cat={c}
+                  onUpdate={(patch) => updateCategoria(c.id, patch)}
+                  onDelete={() => removeCategoria(c.id)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
         <Button
           variant="outline"
           size="sm"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Copy, FileText, Link2, Loader2, MessageCircle, Pencil, Share2 } from 'lucide-react'
+import { ArrowLeft, FileText, Link2, Loader2, MessageCircle, Pencil, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,8 +21,6 @@ export function BudgetDetailPage() {
   const navigate = useNavigate()
   const getBudget = useStore((s) => s.getBudget)
   const local = useStore((s) => s.local)
-  const duplicateBudget = useStore((s) => s.duplicateBudget)
-  const saveBudget = useStore((s) => s.saveBudget)
 
   const presupuesto = getBudget(id)
   const [shareOpen, setShareOpen] = useState(false)
@@ -97,27 +95,20 @@ export function BudgetDetailPage() {
     }
   }
 
-  const handleDuplicar = () => {
-    const draft = duplicateBudget(presupuesto.id)
-    if (!draft) return
-    const saved = saveBudget(draft)
-    toast.success(`Duplicado como ${formatNro(saved.nro)}`)
-    navigate(`/editar/${saved.id}`)
-  }
-
   return (
     <div className="mx-auto max-w-xl px-4 pb-28 pt-4">
       <div className="mb-3 flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={() => navigate('/')} aria-label="Volver">
           <ArrowLeft className="size-5" />
         </Button>
-        <h1 className="flex-1 text-lg font-semibold">Presupuesto {formatNro(presupuesto.nro)}</h1>
-        <Button variant="outline" size="sm" onClick={() => navigate(`/editar/${presupuesto.id}`)}>
-          <Pencil className="size-4" /> Editar
-        </Button>
-        <Button variant="outline" size="icon" onClick={handleDuplicar} aria-label="Duplicar">
-          <Copy className="size-4" />
-        </Button>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-lg font-semibold leading-tight">
+            {presupuesto.cliente.nombre || 'Sin cliente'}
+          </h1>
+          <span className="text-xs text-muted-foreground">
+            Presupuesto {formatNro(presupuesto.nro)}
+          </span>
+        </div>
       </div>
 
       {/* Documento cliente (vista en pantalla) */}
@@ -160,6 +151,15 @@ export function BudgetDetailPage() {
       {/* Acciones */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-xl gap-2 px-4 py-3">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => navigate(`/editar/${presupuesto.id}`)}
+            id="btn-editar"
+          >
+            <Pencil className="size-4" />
+            Editar presupuesto {formatNro(presupuesto.nro)}
+          </Button>
           <Dialog open={shareOpen} onOpenChange={setShareOpen}>
             <DialogTrigger asChild>
               <Button className="flex-1" id="btn-compartir">

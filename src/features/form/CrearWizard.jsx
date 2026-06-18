@@ -62,21 +62,11 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
   if (step === 2) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setStep(1)}
-            aria-label="Volver al paso anterior"
-          >
-            <ArrowLeft className="size-5" />
-          </Button>
-          <div>
-            <h2 className="text-base font-semibold">¿Qué tipo de vehículo es?</h2>
-            <p className="text-sm text-muted-foreground">
-              Define los precios de cada ítem.
-            </p>
-          </div>
+        <div>
+          <h2 className="text-base font-semibold">¿Qué tipo de vehículo es?</h2>
+          <p className="text-sm text-muted-foreground">
+            Define los precios de cada ítem.
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {tiposAuto.map((t) => {
@@ -98,27 +88,27 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
             )
           })}
         </div>
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full"
+          onClick={() => setStep(1)}
+          aria-label="Volver al paso anterior"
+        >
+          <ArrowLeft className="size-5" />
+          Volver
+        </Button>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setStep(2)}
-          aria-label="Volver al paso anterior"
-        >
-          <ArrowLeft className="size-5" />
-        </Button>
-        <div>
-          <h2 className="text-base font-semibold">¿Paquete o desde cero?</h2>
-          <p className="text-sm text-muted-foreground">
-            Elegí un combo predefinido o armalo manualmente.
-          </p>
-        </div>
+      <div>
+        <h2 className="text-base font-semibold">¿Paquete o desde cero?</h2>
+        <p className="text-sm text-muted-foreground">
+          Elegí un combo predefinido o armalo manualmente.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -167,6 +157,17 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
           <span className="font-medium">Empezar desde cero (manual)</span>
         </button>
       </div>
+
+      <Button
+        variant="outline"
+        size="lg"
+        className="w-full"
+        onClick={() => setStep(2)}
+        aria-label="Volver al paso anterior"
+      >
+        <ArrowLeft className="size-5" />
+        Volver
+      </Button>
     </div>
   )
 }

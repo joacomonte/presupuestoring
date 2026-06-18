@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Plus, Settings } from 'lucide-react'
+import { List, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/Logo'
 import { DolarButton } from '@/components/DolarButton'
@@ -31,11 +31,11 @@ export function AppLayout() {
 
           <DolarButton />
 
-          {!inForm && (
-            <Button asChild size="sm" id="btn-nuevo-header">
-              <Link to="/nuevo">
-                <Plus className="size-4" />
-                <span className="hidden sm:inline">Nuevo presupuesto</span>
+          {inForm && (
+            <Button asChild size="sm" variant="outline" id="btn-lista-header">
+              <Link to="/">
+                <List className="size-4" />
+                <span>Presupuestos</span>
               </Link>
             </Button>
           )}

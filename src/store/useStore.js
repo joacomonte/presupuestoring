@@ -64,6 +64,12 @@ export const useStore = create(
         })),
       removeTipoAuto: (id) =>
         set((s) => ({ tiposAuto: s.tiposAuto.filter((t) => t.id !== id) })),
+      reorderTiposAuto: (orderedIds) =>
+        set((s) => ({
+          tiposAuto: orderedIds
+            .map((id) => s.tiposAuto.find((t) => t.id === id))
+            .filter(Boolean),
+        })),
 
       // ---------------- Formas de pago ----------------
       addFormaPago: (nombre) => {
@@ -95,16 +101,17 @@ export const useStore = create(
         })),
       removeCategoria: (id) =>
         set((s) => ({ categorias: s.categorias.filter((c) => c.id !== id) })),
-      moveCategoria: (id, dir) =>
+      reorderCategorias: (orderedIds) =>
         set((s) => {
-          const ordered = [...s.categorias].sort((a, b) => a.orden - b.orden)
-          const i = ordered.findIndex((c) => c.id === id)
-          const j = dir === 'up' ? i - 1 : i + 1
-          if (i < 0 || j < 0 || j >= ordered.length) return {}
-          const tmp = ordered[i].orden
-          ordered[i] = { ...ordered[i], orden: ordered[j].orden }
-          ordered[j] = { ...ordered[j], orden: tmp }
-          return { categorias: ordered }
+          const byId = new Map(s.categorias.map((c) => [c.id, c]))
+          return {
+            categorias: orderedIds
+              .map((id, idx) => {
+                const c = byId.get(id)
+                return c ? { ...c, orden: idx } : null
+              })
+              .filter(Boolean),
+          }
         }),
 
       // ---------------- Productos ----------------
@@ -179,15 +186,12 @@ export const useStore = create(
         })),
       removePaquete: (id) =>
         set((s) => ({ paquetes: s.paquetes.filter((p) => p.id !== id) })),
-      movePaquete: (id, dir) =>
-        set((s) => {
-          const ordered = [...s.paquetes]
-          const i = ordered.findIndex((p) => p.id === id)
-          const j = dir === 'up' ? i - 1 : i + 1
-          if (i < 0 || j < 0 || j >= ordered.length) return {}
-          ;[ordered[i], ordered[j]] = [ordered[j], ordered[i]]
-          return { paquetes: ordered }
-        }),
+      reorderPaquetes: (orderedIds) =>
+        set((s) => ({
+          paquetes: orderedIds
+            .map((id) => s.paquetes.find((p) => p.id === id))
+            .filter(Boolean),
+        })),
 
       // ---------------- Actualización masiva de precios ----------------
       // Escala precios de venta (matriz), deltas (monto) y precios unitarios.

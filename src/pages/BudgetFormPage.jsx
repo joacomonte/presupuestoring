@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, User, Car, Tag, Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
+import { User, Car, Tag, Receipt, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -78,6 +78,15 @@ export function BudgetFormPage() {
   const ctx = { tiposAuto, productos, items: catalogoItems, categorias }
   const totals = computeTotals(draft)
   const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden)
+
+  // Orden de las tabs para navegar con los botones Volver / Continuar.
+  const tabOrder = [
+    'cliente',
+    'vehiculo',
+    ...categoriasOrdenadas.map((c) => `cat-${c.id}`),
+    'cierre',
+  ]
+  const tabIndex = tabOrder.indexOf(tab)
 
   // ---- mutadores del borrador ----
   const patch = (p) => setDraft((d) => ({ ...d, ...p }))
@@ -161,14 +170,6 @@ export function BudgetFormPage() {
   return (
     <div className="mx-auto max-w-xl px-4 pb-32 pt-4">
       <div className="mb-3 flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          aria-label="Volver"
-        >
-          <ArrowLeft className="size-5" />
-        </Button>
         <h1 className="text-lg font-semibold">
           {id ? `Editar presupuesto ${formatNro(draft.nro)}` : 'Nuevo presupuesto'}
         </h1>
@@ -265,6 +266,30 @@ export function BudgetFormPage() {
               />
             </TabsContent>
           </Tabs>
+
+          <div className="mt-4 flex gap-3">
+            <Button
+              id="form-tab-volver"
+              variant="outline"
+              size="lg"
+              className="flex-1"
+              disabled={tabIndex <= 0}
+              onClick={() => setTab(tabOrder[tabIndex - 1])}
+            >
+              <ChevronLeft className="size-5" />
+              Volver
+            </Button>
+            <Button
+              id="form-tab-continuar"
+              size="lg"
+              className="flex-1"
+              disabled={tabIndex >= tabOrder.length - 1}
+              onClick={() => setTab(tabOrder[tabIndex + 1])}
+            >
+              Continuar
+              <ChevronRight className="size-5" />
+            </Button>
+          </div>
 
           <SummaryBar
             presupuesto={draft}
