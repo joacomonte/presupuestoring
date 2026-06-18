@@ -1,5 +1,19 @@
+import { useState } from 'react'
 import { ChevronDown, Plus, Trash2, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -54,7 +68,7 @@ function DeltaEditor({ delta, onChange }) {
         <MoneyInput
           value={delta.monto}
           onChange={(monto) => onChange({ modo: 'monto', monto })}
-          className="w-32"
+          className="w-44"
         />
       ) : (
         <Input
@@ -306,6 +320,46 @@ function OptionsEditor({ opciones, onChange }) {
   )
 }
 
+function ProductoPicker({ productos, onSelect }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="mt-2 flex h-8 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-xs text-muted-foreground shadow-xs transition hover:bg-accent"
+        >
+          + Agregar producto
+          <ChevronDown className="size-4 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar producto…" className="text-xs" />
+          <CommandList>
+            <CommandEmpty className="py-4 text-center text-xs">Sin resultados.</CommandEmpty>
+            <CommandGroup>
+              {productos.map((p) => (
+                <CommandItem
+                  key={p.id}
+                  value={p.nombre}
+                  onSelect={() => {
+                    onSelect(p.id)
+                    setOpen(false)
+                  }}
+                  className="text-xs"
+                >
+                  {p.nombre} ({formatMoney(p.costo)})
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function ItemEditor({ item, categorias, tiposAuto, productos, onUpdate, onRemove }) {
   const categoria = categorias.find((c) => c.id === item.categoriaId)
   const setPrecio = (tipoId, money) =>
@@ -400,23 +454,12 @@ function ItemEditor({ item, categorias, tiposAuto, productos, onUpdate, onRemove
               ))}
             </div>
             {productosDisp.length > 0 && (
-              <Select
-                value=""
-                onValueChange={(pid) =>
+              <ProductoPicker
+                productos={productosDisp}
+                onSelect={(pid) =>
                   onUpdate({ productoIds: [...(item.productoIds || []), pid] })
                 }
-              >
-                <SelectTrigger size="sm" className="mt-2 h-8 w-full text-xs">
-                  <SelectValue placeholder="+ Agregar producto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {productosDisp.map((p) => (
-                    <SelectItem key={p.id} value={p.id} className="text-xs">
-                      {p.nombre} ({formatMoney(p.costo)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             )}
           </Field>
 

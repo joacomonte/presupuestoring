@@ -38,7 +38,7 @@ export function buildSeed() {
   }
 
   const local = {
-    nombre: 'Detailing Studio AR',
+    nombre: 'Blaster Detailing',
     telefono: '+54 9 11 5555-1234',
     direccion: 'Av. Siempreviva 1234, CABA',
     email: '',

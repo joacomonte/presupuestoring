@@ -4,7 +4,7 @@ import { buildSeed, STORAGE_KEY, SEED_VERSION } from '@/data/seed'
 import { uid } from '@/lib/id'
 import { createDraft as buildDraft, duplicateDraft } from '@/lib/budget'
 
-const DATA_KEYS = [
+export const DATA_KEYS = [
   'seedVersion',
   'config',
   'local',
@@ -32,6 +32,9 @@ export const useStore = create(
   persist(
     (set, get) => ({
       ...buildSeed(),
+
+      // Cambios de ajustes/catálogos sin guardar en la DB (no se persiste ni se sube).
+      dirty: false,
 
       // ---------------- Config ----------------
       setCotizacionUsd: (v) =>

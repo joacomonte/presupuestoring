@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Plus, Settings, Sparkles } from 'lucide-react'
+import { Plus, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/Logo'
 import { useStore } from '@/store/useStore'
 import { cn } from '@/lib/utils'
 
@@ -14,9 +15,7 @@ export function AppLayout() {
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4">
           <Link to="/" className="flex min-w-0 items-center gap-2">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Sparkles className="size-4" />
-            </span>
+            <Logo className="size-8" />
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold leading-tight">
                 {nombre || 'Presupuestos'}
@@ -33,11 +32,11 @@ export function AppLayout() {
             <Button asChild size="sm" id="btn-nuevo-header">
               <Link to="/nuevo">
                 <Plus className="size-4" />
-                <span className="hidden sm:inline">Nuevo</span>
+                <span className="hidden sm:inline">Nuevo presupuesto</span>
               </Link>
             </Button>
           )}
-          <Button asChild size="icon" variant="ghost" id="btn-ajustes" aria-label="Ajustes">
+          <Button asChild size="sm" variant="ghost" id="btn-ajustes" aria-label="Configurar costos">
             <NavLink
               to="/ajustes"
               className={({ isActive }) =>
@@ -45,6 +44,7 @@ export function AppLayout() {
               }
             >
               <Settings className="size-5" />
+              <span className="hidden sm:inline">Configurar costos</span>
             </NavLink>
           </Button>
         </div>

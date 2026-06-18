@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
+import { AuthGate } from '@/components/AuthGate'
+import { DbSync } from '@/components/DbSync'
 import { BudgetListPage } from '@/pages/BudgetListPage'
 import { BudgetFormPage } from '@/pages/BudgetFormPage'
 import { BudgetDetailPage } from '@/pages/BudgetDetailPage'
@@ -12,7 +14,15 @@ function App() {
       <Routes>
         {/* Vista pública del link compartido (fuera del layout del dueño) */}
         <Route path="ver/:id" element={<SharedBudgetPage />} />
-        <Route element={<AppLayout />}>
+        <Route
+          element={
+            <AuthGate>
+              <DbSync>
+                <AppLayout />
+              </DbSync>
+            </AuthGate>
+          }
+        >
           <Route index element={<BudgetListPage />} />
           <Route path="nuevo" element={<BudgetFormPage />} />
           <Route path="editar/:id" element={<BudgetFormPage />} />

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import { Download, RotateCcw, TrendingUp, Upload } from 'lucide-react'
+import { CloudDownload, CloudUpload, Download, Loader2, RotateCcw, TrendingUp, Upload } from 'lucide-react'
 import { toast } from 'sonner'
+import { saveAppState, loadAppState } from '@/lib/cloud'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,9 @@ export function DataSettings() {
   const [scope, setScope] = useState('all')
   const [confirmBump, setConfirmBump] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [cloudSaving, setCloudSaving] = useState(false)
+  const [cloudLoading, setCloudLoading] = useState(false)
+  const [confirmCloudLoad, setConfirmCloudLoad] = useState(false)
   const fileRef = useRef(null)
 
   const doBump = () => {
@@ -50,6 +54,38 @@ export function DataSettings() {
     a.click()
     URL.revokeObjectURL(url)
     toast.success('Datos exportados')
+  }
+
+  const doCloudSave = async () => {
+    setCloudSaving(true)
+    try {
+      await saveAppState(exportData())
+      toast.success('Guardado en la nube')
+    } catch (e) {
+      toast.error(e.message || 'No se pudo guardar')
+      console.error(e)
+    } finally {
+      setCloudSaving(false)
+    }
+  }
+
+  const doCloudLoad = async () => {
+    setCloudLoading(true)
+    try {
+      const data = await loadAppState()
+      if (!data) {
+        toast.error('No hay datos en la nube todavía')
+        return
+      }
+      importData(data)
+      toast.success('Cargado de la nube')
+      setConfirmCloudLoad(false)
+    } catch (e) {
+      toast.error(e.message || 'No se pudo cargar')
+      console.error(e)
+    } finally {
+      setCloudLoading(false)
+    }
   }
 
   const doImport = (e) => {
@@ -134,6 +170,30 @@ export function DataSettings() {
         </div>
       </div>
 
+      {/* Nube (Neon) */}
+      <div className="border-t pt-4">
+        <div className="mb-2 text-sm font-semibold">Nube</div>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Guardá todos los datos en la nube o traélos a este dispositivo. Cargar reemplaza
+          todo lo que tengas acá.
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={doCloudSave} disabled={cloudSaving} id="btn-cloud-save">
+            {cloudSaving ? <Loader2 className="size-4 animate-spin" /> : <CloudUpload className="size-4" />}
+            Guardar en la nube
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setConfirmCloudLoad(true)}
+            disabled={cloudLoading}
+            id="btn-cloud-load"
+          >
+            {cloudLoading ? <Loader2 className="size-4 animate-spin" /> : <CloudDownload className="size-4" />}
+            Cargar de la nube
+          </Button>
+        </div>
+      </div>
+
       {/* Reset */}
       <div className="border-t pt-4">
         <div className="mb-2 text-sm font-semibold">Modo prototipo</div>
@@ -156,6 +216,16 @@ export function DataSettings() {
         description={`Se ${Number(pct) >= 0 ? 'aumentarán' : 'reducirán'} los precios de venta un ${pct}% (${scope === 'all' ? 'todo el catálogo' : 'una categoría'}). Los presupuestos ya guardados no se modifican.`}
         confirmLabel="Aplicar"
         onConfirm={doBump}
+      />
+
+      <ConfirmDialog
+        open={confirmCloudLoad}
+        onOpenChange={setConfirmCloudLoad}
+        title="Cargar de la nube"
+        description="Se reemplazarán TODOS los datos de este dispositivo (catálogos, configuración y presupuestos) por los guardados en la nube. Esta acción no se puede deshacer."
+        confirmLabel="Cargar"
+        destructive
+        onConfirm={doCloudLoad}
       />
 
       <ConfirmDialog

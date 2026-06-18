@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   Copy,
   FileText,
   MoreVertical,
   Pencil,
-  Plus,
   Search,
   Trash2,
 } from 'lucide-react'
@@ -70,11 +69,6 @@ export function BudgetListPage() {
     <div className="mx-auto max-w-xl px-4 pb-10 pt-4">
       <div className="mb-3 flex items-center justify-between">
         <h1 className="text-xl font-bold">Presupuestos</h1>
-        <Button asChild id="btn-nuevo">
-          <Link to="/nuevo">
-            <Plus className="size-4" /> Nuevo
-          </Link>
-        </Button>
       </div>
 
       {presupuestos.length > 0 && (
@@ -96,14 +90,9 @@ export function BudgetListPage() {
             <FileText className="size-7 text-muted-foreground" />
           </div>
           <p className="text-base font-medium">Todavía no hay presupuestos</p>
-          <p className="mb-4 max-w-xs text-sm text-muted-foreground">
-            Creá tu primer presupuesto. Ya viene precargado el paquete más usado para ir rápido.
+          <p className="max-w-xs text-sm text-muted-foreground">
+            Creá tu primer presupuesto desde el botón <span className="font-medium text-foreground">Nuevo</span> arriba a la derecha. Ya viene precargado el paquete más usado para ir rápido.
           </p>
-          <Button asChild>
-            <Link to="/nuevo">
-              <Plus className="size-4" /> Nuevo presupuesto
-            </Link>
-          </Button>
         </div>
       ) : (
         <div className="space-y-2">
