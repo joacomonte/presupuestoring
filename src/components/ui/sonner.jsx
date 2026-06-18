@@ -24,7 +24,7 @@ const Toaster = ({
       toastOptions={{
         classNames: {
           closeButton:
-            "!size-6 !border-2 !bg-background !text-foreground !opacity-100 [&>svg]:!size-3.5 [&>svg]:!stroke-[2.5]",
+            "!size-7 !border !bg-muted !text-foreground !opacity-100 hover:!bg-accent [&>svg]:!size-4 [&>svg]:!stroke-[2.5]",
         },
       }}
       style={

@@ -40,6 +40,7 @@ export function BudgetListPage() {
       [
         formatNro(p.nro),
         p.cliente?.nombre,
+        p.cliente?.apodo,
         p.vehiculo?.descripcion,
         p.vehiculo?.patente,
       ]
@@ -78,7 +79,7 @@ export function BudgetListPage() {
             id="buscar"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por N°, cliente, vehículo o patente"
+            placeholder="Buscar por N°, cliente, apodo, vehículo o patente"
             className="pl-9"
           />
         </div>
@@ -118,7 +119,7 @@ export function BudgetListPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium leading-tight">
-                      {p.cliente?.nombre || 'Sin cliente'}
+                      {p.cliente?.nombre || p.cliente?.apodo || 'Sin cliente'}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
                       {[p.vehiculo?.descripcion, p.vehiculo?.patente]
@@ -177,7 +178,7 @@ export function BudgetListPage() {
         title="Eliminar presupuesto"
         description={
           toDelete
-            ? `Se eliminará el presupuesto ${formatNro(toDelete.nro)} de ${toDelete.cliente?.nombre || 'sin cliente'}. Esta acción no se puede deshacer.`
+            ? `Se eliminará el presupuesto ${formatNro(toDelete.nro)} de ${toDelete.cliente?.nombre || toDelete.cliente?.apodo || 'sin cliente'}. Esta acción no se puede deshacer.`
             : ''
         }
         confirmLabel="Eliminar"

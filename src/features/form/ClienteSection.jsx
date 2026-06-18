@@ -12,7 +12,7 @@ import {
 
 export function ClienteSection({ cliente, onChange, open, onOpenChange, plain }) {
   const [factOpen, setFactOpen] = useState(!!cliente.facturacion)
-  const summary = cliente.nombre || cliente.telefono || null
+  const summary = cliente.nombre || cliente.apodo || cliente.telefono || null
 
   return (
     <Section
@@ -25,14 +25,24 @@ export function ClienteSection({ cliente, onChange, open, onOpenChange, plain })
       plain={plain}
     >
       <div className="space-y-3">
-        <Field label="Nombre / Razón social" htmlFor="cli-nombre">
-          <Input
-            id="cli-nombre"
-            value={cliente.nombre}
-            onChange={(e) => onChange({ nombre: e.target.value })}
-            placeholder="Ej. Juan Pérez"
-          />
-        </Field>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Nombre / Razón social" htmlFor="cli-nombre">
+            <Input
+              id="cli-nombre"
+              value={cliente.nombre}
+              onChange={(e) => onChange({ nombre: e.target.value })}
+              placeholder="Ej. Juan Pérez"
+            />
+          </Field>
+          <Field label="Apodo" htmlFor="cli-apodo" hint="Para buscar rápido">
+            <Input
+              id="cli-apodo"
+              value={cliente.apodo || ''}
+              onChange={(e) => onChange({ apodo: e.target.value })}
+              placeholder="Ej. el Gringo"
+            />
+          </Field>
+        </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Teléfono" htmlFor="cli-tel" hint="Se usa para WhatsApp">
             <Input

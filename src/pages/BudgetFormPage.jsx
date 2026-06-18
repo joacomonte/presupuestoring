@@ -113,7 +113,7 @@ export function BudgetFormPage() {
   // Completa el wizard: fija el tipo de vehículo y precarga los ítems del
   // paquete elegido (o arranca vacío si es manual). Reemplaza los ítems del
   // borrador para no arrastrar la precarga inicial de createDraft.
-  const completeWizard = (tipoAutoId, paquete) => {
+  const completeWizard = (nombre, tipoAutoId, paquete) => {
     setDraft((d) => {
       const items = paquete
         ? (paquete.itemIds || [])
@@ -121,7 +121,12 @@ export function BudgetFormPage() {
             .filter(Boolean)
             .map((ci) => materializeItem(ci, tipoAutoId, ctx))
         : []
-      return { ...d, vehiculo: { ...d.vehiculo, tipoAutoId }, items }
+      return {
+        ...d,
+        cliente: { ...d.cliente, nombre: nombre.trim() },
+        vehiculo: { ...d.vehiculo, tipoAutoId },
+        items,
+      }
     })
     setWizardDone(true)
   }

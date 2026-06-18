@@ -1,16 +1,10 @@
 import { useState } from 'react'
 import { ChevronUp, FileCheck2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { QuickToggle } from '@/components/QuickToggle'
+import { MontoUnidad } from '@/components/MontoUnidad'
 import { formatARS } from '@/lib/format'
 import { cn } from '@/lib/utils'
-
-const TIPO_OPTS = [
-  { value: '%', label: '%' },
-  { value: 'monto', label: '$' },
-]
 
 function Row({ label, value, strong, accent, onClick }) {
   return (
@@ -105,34 +99,23 @@ export function SummaryBar({
               <Row label="Subtotal" value={formatARS(totals.subtotal)} />
 
               {/* Bonificación a ojo */}
-              <div className="my-2 rounded-lg bg-muted/50 p-2">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span className="text-sm font-medium">Bonificación</span>
-                  {totals.descuento > 0 && (
-                    <span className="text-sm font-semibold tabular-nums text-emerald-600">
-                      −{formatARS(totals.descuento)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <QuickToggle
-                    size="sm"
-                    options={TIPO_OPTS}
-                    value={presupuesto.descuento.tipo}
-                    onChange={(tipo) => patchDescuento({ tipo })}
-                  />
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={presupuesto.descuento.valor || ''}
-                    onChange={(e) =>
-                      patchDescuento({ valor: Number(e.target.value) || 0 })
-                    }
-                    placeholder="0"
-                    className="h-8 w-24"
-                  />
-                </div>
+              <div className="my-2 rounded-lg bg-muted/50 p-2.5">
+                <div className="mb-0.5 text-sm font-medium">Bonificación</div>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Descuento sobre el subtotal
+                </p>
+                <MontoUnidad
+                  id="sb-desc"
+                  tipo={presupuesto.descuento.tipo}
+                  valor={presupuesto.descuento.valor}
+                  onTipoChange={(tipo) => patchDescuento({ tipo })}
+                  onValorChange={(valor) => patchDescuento({ valor })}
+                />
+                {totals.descuento > 0 && (
+                  <p className="mt-2 text-sm font-semibold tabular-nums text-emerald-600">
+                    −{formatARS(totals.descuento)} de descuento
+                  </p>
+                )}
               </div>
 
               {/* IVA */}
@@ -157,32 +140,26 @@ export function SummaryBar({
               <Row label="Total" value={formatARS(totals.total)} strong />
 
               {/* Seña */}
-              <div className="my-2 rounded-lg bg-muted/50 p-2">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span className="text-sm font-medium">Seña / anticipo</span>
-                  {totals.sena > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      Saldo {formatARS(totals.saldo)}
+              <div className="my-2 rounded-lg bg-muted/50 p-2.5">
+                <div className="mb-0.5 text-sm font-medium">Seña / anticipo</div>
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Lo que paga por adelantado
+                </p>
+                <MontoUnidad
+                  id="sb-sena"
+                  tipo={presupuesto.sena.tipo}
+                  valor={presupuesto.sena.valor}
+                  onTipoChange={(tipo) => patchSena({ tipo })}
+                  onValorChange={(valor) => patchSena({ valor })}
+                />
+                {totals.sena > 0 && (
+                  <p className="mt-2 text-sm tabular-nums">
+                    Seña <span className="font-semibold">{formatARS(totals.sena)}</span>
+                    <span className="text-muted-foreground">
+                      {' · '}Saldo {formatARS(totals.saldo)}
                     </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <QuickToggle
-                    size="sm"
-                    options={TIPO_OPTS}
-                    value={presupuesto.sena.tipo}
-                    onChange={(tipo) => patchSena({ tipo })}
-                  />
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={presupuesto.sena.valor || ''}
-                    onChange={(e) => patchSena({ valor: Number(e.target.value) || 0 })}
-                    placeholder="0"
-                    className="h-8 w-24"
-                  />
-                </div>
+                  </p>
+                )}
               </div>
 
               {/* Vista operador */}
@@ -207,19 +184,19 @@ export function SummaryBar({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="flex flex-1 items-center gap-2 rounded-xl px-3 py-1.5 text-left hover:bg-accent"
+              className="flex min-w-0 flex-1 flex-col justify-center rounded-xl px-3 py-1.5 text-left hover:bg-accent"
             >
-              <ChevronUp
-                className={cn(
-                  'size-5 shrink-0 text-muted-foreground transition-transform',
-                  expanded && 'rotate-180'
-                )}
-              />
-              <span className="min-w-0">
-                <span className="block text-[11px] leading-none text-muted-foreground">
-                  Total {itemsResumen.length > 0 && `· ${itemsResumen.length} ítems`}
-                </span>
-                <span className="block text-lg font-bold leading-tight tabular-nums">
+              <span className="pl-7 text-[11px] leading-none text-muted-foreground">
+                Total {itemsResumen.length > 0 && `· ${itemsResumen.length} ítems`}
+              </span>
+              <span className="flex items-center gap-2">
+                <ChevronUp
+                  className={cn(
+                    'size-5 shrink-0 text-muted-foreground transition-transform',
+                    expanded && 'rotate-180'
+                  )}
+                />
+                <span className="min-w-0 truncate text-lg font-bold leading-tight tabular-nums">
                   {formatARS(totals.total)}
                 </span>
               </span>
@@ -229,11 +206,11 @@ export function SummaryBar({
               id="btn-generar"
               size="lg"
               className="shrink-0"
-              onClick={onGenerar}
-              disabled={saving}
+              onClick={expanded ? onGenerar : () => setExpanded(true)}
+              disabled={expanded && saving}
             >
               <FileCheck2 className="size-4" />
-              Generar
+              {expanded ? 'Generar' : 'Resumen'}
             </Button>
           </div>
         </div>

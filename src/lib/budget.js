@@ -90,6 +90,7 @@ export function createDraft(state) {
     fechaEmision: new Date().toISOString(),
     cliente: {
       nombre: '',
+      apodo: '',
       telefono: '',
       email: '',
       facturacion: '',

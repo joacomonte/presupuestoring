@@ -6,12 +6,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { QuickToggle } from '@/components/QuickToggle'
+import { MontoUnidad } from '@/components/MontoUnidad'
 import { formatARS } from '@/lib/format'
-
-const TIPO_OPTS = [
-  { value: '%', label: '%' },
-  { value: 'monto', label: '$ Monto' },
-]
 
 export function CierreSection({
   presupuesto,
@@ -72,64 +68,45 @@ export function CierreSection({
 
         {/* Bonificación / descuento (a nivel total) */}
         <div className="rounded-lg border bg-muted/30 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">Bonificación / descuento</span>
-            {totals.descuento > 0 && (
-              <span className="text-sm font-semibold tabular-nums text-emerald-600">
-                −{formatARS(totals.descuento)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <QuickToggle
-              id="desc-tipo"
-              size="sm"
-              options={TIPO_OPTS}
-              value={presupuesto.descuento.tipo}
-              onChange={(tipo) => patchDescuento({ tipo })}
-            />
-            <Input
-              id="desc-valor"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={presupuesto.descuento.valor || ''}
-              onChange={(e) => patchDescuento({ valor: Number(e.target.value) || 0 })}
-              placeholder="0"
-              className="w-28"
-            />
-          </div>
+          <div className="mb-0.5 text-sm font-medium">Bonificación / descuento</div>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Descuento sobre el subtotal
+          </p>
+          <MontoUnidad
+            id="desc"
+            tipo={presupuesto.descuento.tipo}
+            valor={presupuesto.descuento.valor}
+            onTipoChange={(tipo) => patchDescuento({ tipo })}
+            onValorChange={(valor) => patchDescuento({ valor })}
+          />
+          {totals.descuento > 0 && (
+            <p className="mt-2 text-sm font-semibold tabular-nums text-emerald-600">
+              −{formatARS(totals.descuento)} de descuento
+            </p>
+          )}
         </div>
 
         {/* Seña / anticipo */}
         <div className="rounded-lg border bg-muted/30 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">Seña / anticipo</span>
-            {totals.sena > 0 && (
-              <span className="text-right text-xs text-muted-foreground">
-                Seña {formatARS(totals.sena)} · Saldo {formatARS(totals.saldo)}
+          <div className="mb-0.5 text-sm font-medium">Seña / anticipo</div>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Lo que paga por adelantado
+          </p>
+          <MontoUnidad
+            id="sena"
+            tipo={presupuesto.sena.tipo}
+            valor={presupuesto.sena.valor}
+            onTipoChange={(tipo) => patchSena({ tipo })}
+            onValorChange={(valor) => patchSena({ valor })}
+          />
+          {totals.sena > 0 && (
+            <p className="mt-2 text-sm tabular-nums">
+              Seña <span className="font-semibold">{formatARS(totals.sena)}</span>
+              <span className="text-muted-foreground">
+                {' · '}Saldo {formatARS(totals.saldo)}
               </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <QuickToggle
-              id="sena-tipo"
-              size="sm"
-              options={TIPO_OPTS}
-              value={presupuesto.sena.tipo}
-              onChange={(tipo) => patchSena({ tipo })}
-            />
-            <Input
-              id="sena-valor"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={presupuesto.sena.valor || ''}
-              onChange={(e) => patchSena({ valor: Number(e.target.value) || 0 })}
-              placeholder="0"
-              className="w-28"
-            />
-          </div>
+            </p>
+          )}
         </div>
 
         {/* IVA */}
