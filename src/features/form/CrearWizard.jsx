@@ -1,32 +1,42 @@
 import { useState } from 'react'
-import { ArrowLeft, Package, PencilLine } from 'lucide-react'
+import { ArrowLeft, Package, PencilLine, Gauge } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { getVehicleIcon } from '@/lib/vehicleIcons'
 import { materializeItem } from '@/lib/budget'
 import { itemFinalARS } from '@/lib/calc'
 import { formatARS } from '@/lib/format'
+import { explicarMultiplicador } from '@/components/MultiplicadorInput'
 
 // Paso previo a la creación del presupuesto:
-//  1. Nombre del cliente (para identificar el presupuesto).
-//  2. Tipo de vehículo (define los precios de cada ítem).
+//  1. Nombre del cliente.
+//  2. Tipo de trabajo (multiplica el total) — opcional, solo si hay tipos definidos.
 //  3. Paquete predefinido (precarga ítems) o manual (arranca vacío).
-export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, cotizacionUsd, onComplete }) {
+export function CrearWizard({
+  tiposTrabajo,
+  paquetes,
+  paqueteDestacadoId,
+  ctx,
+  cotizacionUsd,
+  onComplete,
+}) {
+  const usaTipoTrabajo = (tiposTrabajo || []).length > 0
   const [step, setStep] = useState(1)
   const [nombre, setNombre] = useState('')
-  const [tipoAutoId, setTipoAutoId] = useState(null)
+  const [tipoTrabajo, setTipoTrabajo] = useState(null)
 
-  // Resumen del paquete para el tipo de auto elegido: ítems incluidos (títulos)
-  // y costo estimado (suma del precio final con opciones por defecto).
+  // Paso final (paquete) es 2 si no hay tipos de trabajo, 3 si los hay.
+  const stepPaquete = usaTipoTrabajo ? 3 : 2
+
+  // Resumen del paquete: ítems incluidos y costo estimado (con el multiplicador elegido).
   const resumenPaquete = (paq) => {
     const itemsCat = (paq.itemIds || [])
       .map((iid) => ctx.items.find((c) => c.id === iid))
       .filter(Boolean)
     const titulos = itemsCat.map((ci) => ci.titulo)
-    const estimadoARS = itemsCat.reduce(
-      (s, ci) => s + itemFinalARS(materializeItem(ci, tipoAutoId, ctx), cotizacionUsd),
-      0
-    )
+    const mult = Number(tipoTrabajo?.multiplicador) || 1
+    const estimadoARS =
+      itemsCat.reduce((s, ci) => s + itemFinalARS(materializeItem(ci, ctx), cotizacionUsd), 0) *
+      mult
     return { titulos, estimadoARS }
   }
 
@@ -36,7 +46,7 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault()
-          setStep(2)
+          setStep(usaTipoTrabajo ? 2 : stepPaquete)
         }}
       >
         <div>
@@ -59,34 +69,45 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
     )
   }
 
-  if (step === 2) {
+  if (usaTipoTrabajo && step === 2) {
+    const elegir = (tt) => {
+      setTipoTrabajo(tt)
+      setStep(stepPaquete)
+    }
     return (
       <div className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold">¿Qué tipo de vehículo es?</h2>
+          <h2 className="text-base font-semibold">¿Qué tipo de trabajo es?</h2>
           <p className="text-sm text-muted-foreground">
-            Define los precios de cada ítem.
+            Multiplica el total. Es opcional: podés no incluirlo.
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          {tiposAuto.map((t) => {
-            const Icon = getVehicleIcon(t.icono)
-            return (
-              <button
-                key={t.id}
-                id={`wiz-tipo-${t.id}`}
-                type="button"
-                onClick={() => {
-                  setTipoAutoId(t.id)
-                  setStep(3)
-                }}
-                className="flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center shadow-sm transition hover:border-primary hover:bg-accent"
-              >
-                <Icon className="size-7 text-muted-foreground" />
-                <span className="font-medium leading-tight">{t.nombre}</span>
-              </button>
-            )
-          })}
+        <div className="grid grid-cols-1 gap-2">
+          <button
+            type="button"
+            id="wiz-tt-ninguno"
+            onClick={() => elegir(null)}
+            className="flex items-center gap-3 rounded-xl border border-dashed bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
+          >
+            <span className="font-medium">No incluir</span>
+          </button>
+          {tiposTrabajo.map((t) => (
+            <button
+              key={t.id}
+              id={`wiz-tt-${t.id}`}
+              type="button"
+              onClick={() => elegir({ id: t.id, nombre: t.nombre, multiplicador: t.multiplicador })}
+              className="flex items-center gap-3 rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
+            >
+              <Gauge className="size-5 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium leading-tight">{t.nombre}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {Number(t.multiplicador)}× · {explicarMultiplicador(t.multiplicador)}
+                </span>
+              </span>
+            </button>
+          ))}
         </div>
         <Button
           variant="outline"
@@ -119,7 +140,7 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
               key={paq.id}
               id={`wiz-paq-${paq.id}`}
               type="button"
-              onClick={() => onComplete(nombre, tipoAutoId, paq)}
+              onClick={() => onComplete(nombre, tipoTrabajo, paq)}
               className="flex items-start gap-3 rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
             >
               <Package className="mt-0.5 size-6 shrink-0 text-muted-foreground" />
@@ -150,7 +171,7 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
         <button
           id="wiz-manual"
           type="button"
-          onClick={() => onComplete(nombre, tipoAutoId, null)}
+          onClick={() => onComplete(nombre, tipoTrabajo, null)}
           className="flex items-center gap-3 rounded-xl border border-dashed bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
         >
           <PencilLine className="size-6 shrink-0 text-muted-foreground" />
@@ -162,7 +183,7 @@ export function CrearWizard({ tiposAuto, paquetes, paqueteDestacadoId, ctx, coti
         variant="outline"
         size="lg"
         className="w-full"
-        onClick={() => setStep(2)}
+        onClick={() => setStep(usaTipoTrabajo ? 2 : 1)}
         aria-label="Volver al paso anterior"
       >
         <ArrowLeft className="size-5" />

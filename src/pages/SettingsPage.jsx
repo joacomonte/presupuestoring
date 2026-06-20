@@ -4,7 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
-  ListTree,
+  Gauge,
   Package,
   SlidersHorizontal,
 } from 'lucide-react'
@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { SaveBar } from '@/components/SaveBar'
+import { EjemplosDialog } from '@/components/EjemplosDialog'
 import { GeneralSettings } from '@/features/settings/GeneralSettings'
 import { CatalogosSettings } from '@/features/settings/CatalogosSettings'
 import { ProductosSettings } from '@/features/settings/ProductosSettings'
@@ -30,10 +31,11 @@ function OtrosSettings() {
 
 const TABS = [
   {
-    value: 'vehiculos',
-    icon: ListTree,
-    label: 'Vehículos',
-    desc: 'Definí los tipos de vehículo y cuánto encarece cada uno. El multiplicador ajusta los precios de los servicios para los tipos que no tienen un valor cargado a mano.',
+    value: 'tipos-trabajo',
+    icon: Gauge,
+    label: 'Tipo de trabajo',
+    desc: 'Definí tipos de trabajo que multiplican el total del presupuesto según el tamaño o la complejidad (auto chico, SUV, casa…). Es opcional.',
+    topic: 'tipos-trabajo',
     Content: CatalogosSettings,
   },
   {
@@ -41,13 +43,15 @@ const TABS = [
     icon: Layers,
     label: 'Paquetes',
     desc: 'Armá combos de servicios que se precargan juntos al crear un presupuesto. Marcá uno como Default para que aparezca elegido por defecto.',
+    topic: 'paquetes',
     Content: PaquetesSettings,
   },
   {
     value: 'servicios',
     icon: Boxes,
     label: 'Servicios',
-    desc: 'Tu catálogo de servicios con el precio por tipo de vehículo. Agrupalos en categorías y sumales los productos y variantes que correspondan.',
+    desc: 'Tu catálogo de servicios con su precio. Agrupalos en categorías y sumales los productos y variantes que correspondan.',
+    topic: 'servicios',
     Content: ServiciosSettings,
   },
   {
@@ -55,6 +59,7 @@ const TABS = [
     icon: Package,
     label: 'Productos',
     desc: 'Insumos con su costo interno. Se asocian a los servicios para calcular tu costo y se listan en el presupuesto para que el cliente sepa qué se aplicó.',
+    topic: 'productos',
     Content: ProductosSettings,
   },
   {
@@ -146,7 +151,7 @@ export function SettingsPage() {
         </h1>
       </div>
 
-      <Tabs defaultValue="vehiculos">
+      <Tabs defaultValue="tipos-trabajo">
         <TabScroller>
           <TabsList variant="line" className="h-auto w-auto justify-start gap-1">
             {TABS.map(({ value, icon: Icon, label }) => (
@@ -158,10 +163,20 @@ export function SettingsPage() {
           </TabsList>
         </TabScroller>
 
-        {TABS.map(({ value, desc, Content }) => (
+        {TABS.map(({ value, desc, topic, Content }) => (
           <TabsContent key={value} value={value} className="pt-4">
             {desc && (
-              <p className="mb-4 text-sm text-muted-foreground">{desc}</p>
+              <div className="mb-4 space-y-2">
+                <p className="text-sm text-muted-foreground">{desc}</p>
+                {topic && (
+                  <EjemplosDialog
+                    topic={topic}
+                    label="Ver más ejemplos"
+                    variant="link"
+                    className="h-auto p-0 text-xs text-primary"
+                  />
+                )}
+              </div>
             )}
             <Content />
           </TabsContent>

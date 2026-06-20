@@ -104,15 +104,8 @@ function ProductoPicker({ productos, onSelect }) {
   )
 }
 
-function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onUpdate, onRemove, defaultOpen }) {
+function ItemEditor({ item, categorias, productos, cotizacionUsd, onUpdate, onRemove, defaultOpen }) {
   const categoria = categorias.find((c) => c.id === item.categoriaId)
-  const setPrecio = (tipoId, money) =>
-    onUpdate({ precios: { ...item.precios, [tipoId]: money } })
-  const [bulkPrecio, setBulkPrecio] = useState({ valor: 0, moneda: 'ARS' })
-  const aplicarATodos = () =>
-    onUpdate({
-      precios: Object.fromEntries(tiposAuto.map((t) => [t.id, bulkPrecio])),
-    })
 
   const productosSel = (item.productoIds || [])
     .map((pid) => productos.find((p) => p.id === pid))
@@ -170,38 +163,15 @@ function ItemEditor({ item, categorias, tiposAuto, productos, cotizacionUsd, onU
           </div>
 
           {/* Precio de venta */}
-          <Section title="Precio por tipo de vehiculo">
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-              <span className="flex-1 truncate text-xs font-medium text-muted-foreground">
-                Aplicar a todos
-              </span>
-              <MoneyInput
-                value={bulkPrecio}
-                onChange={setBulkPrecio}
-                className="min-w-0 flex-1"
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="h-8 shrink-0"
-                onClick={aplicarATodos}
-              >
-                Aplicar
-              </Button>
-            </div>
-            <div className="divide-y divide-border/60 rounded-lg border">
-              {tiposAuto.map((t) => (
-                <div key={t.id} className="flex items-center gap-3 px-3 py-2">
-                  <span className="flex-1 truncate text-sm">{t.nombre}</span>
-                  <MoneyInput
-                    value={item.precios?.[t.id] || { valor: 0, moneda: 'ARS' }}
-                    onChange={(m) => setPrecio(t.id, m)}
-                    className="min-w-0 flex-1"
-                  />
-                </div>
-              ))}
-            </div>
+          <Section
+            title="Precio de venta"
+            subtitle="Precio base del servicio. Si usás tipos de trabajo, el multiplicador se aplica al total del presupuesto."
+          >
+            <MoneyInput
+              value={item.precioVenta || { valor: 0, moneda: 'ARS' }}
+              onChange={(m) => onUpdate({ precioVenta: m })}
+              className="w-full"
+            />
           </Section>
 
           {/* Productos */}
@@ -366,7 +336,6 @@ function SortableCategoria({ cat, onUpdate, onDelete }) {
 export function ServiciosSettings() {
   const items = useStore((s) => s.items)
   const categorias = useStore((s) => s.categorias)
-  const tiposAuto = useStore((s) => s.tiposAuto)
   const productos = useStore((s) => s.productos)
   const cotizacionUsd = useStore((s) => s.config.cotizacionUsd)
   const addItem = useStore((s) => s.addItem)
@@ -460,7 +429,7 @@ export function ServiciosSettings() {
         <div className="mb-4">
           <h3 className="mb-1 text-sm font-semibold">Servicios individuales</h3>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Cada servicio que ofrecés, dentro de su categoría. Definís su precio por tipo de vehículo, los productos que consume (para tu costo) y variantes opcionales. Después los sumás a un presupuesto sueltos o dentro de un paquete.
+            Cada servicio que ofrecés, dentro de su categoría. Definís su precio, los productos que consume (para tu costo) y variantes opcionales. Después los sumás a un presupuesto sueltos o dentro de un paquete.
           </p>
         </div>
         <div className="relative mb-3">
@@ -507,7 +476,6 @@ export function ServiciosSettings() {
                       key={item.id}
                       item={item}
                       categorias={categoriasOrdenadas}
-                      tiposAuto={tiposAuto}
                       productos={productos}
                       cotizacionUsd={cotizacionUsd}
                       defaultOpen={item.id === newItemId}

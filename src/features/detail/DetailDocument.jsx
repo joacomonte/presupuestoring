@@ -153,7 +153,13 @@ export function DetailDocument({ presupuesto, local, totals, innerRef }) {
 
       {/* Totales */}
       <div className="mt-2 ml-auto w-full max-w-xs border-t border-zinc-200 pt-2 text-sm">
-        <Línea label="Subtotal" value={formatARS(totals.subtotal)} />
+        <Línea label="Subtotal" value={formatARS(totals.subtotalItems)} />
+        {totals.recargoTrabajo > 0 && (
+          <Línea
+            label={presupuesto.tipoTrabajo?.nombre || 'Tipo de trabajo'}
+            value={`+${formatARS(totals.recargoTrabajo)}`}
+          />
+        )}
         {totals.descuento > 0 && (
           <Línea
             label="Bonificación"

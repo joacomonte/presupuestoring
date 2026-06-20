@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { buildSeed, STORAGE_KEY, SEED_VERSION } from '@/data/seed'
+import { buildSeed, migrateData, STORAGE_KEY, SEED_VERSION } from '@/data/seed'
 import { uid } from '@/lib/id'
 import { createDraft as buildDraft, duplicateDraft } from '@/lib/budget'
 
@@ -8,7 +8,7 @@ export const DATA_KEYS = [
   'seedVersion',
   'config',
   'local',
-  'tiposAuto',
+  'tiposTrabajo',
   'formasPago',
   'categorias',
   'productos',
@@ -47,27 +47,27 @@ export const useStore = create(
         set((s) => ({ config: { ...s.config, formaPagoDefaultId: id } })),
       setLocal: (patch) => set((s) => ({ local: { ...s.local, ...patch } })),
 
-      // ---------------- Tipos de auto ----------------
-      addTipoAuto: (nombre, multiplicador = 1) => {
-        const id = uid('ta')
+      // ---------------- Tipos de trabajo (multiplican el total) ----------------
+      addTipoTrabajo: (nombre = 'Nuevo tipo', multiplicador = 1) => {
+        const id = uid('tt')
         set((s) => ({
-          tiposAuto: [
-            ...s.tiposAuto,
-            { id, nombre, multiplicador: Number(multiplicador) || 1, icono: 'car' },
+          tiposTrabajo: [
+            ...s.tiposTrabajo,
+            { id, nombre, multiplicador: Number(multiplicador) || 1 },
           ],
         }))
         return id
       },
-      updateTipoAuto: (id, patch) =>
+      updateTipoTrabajo: (id, patch) =>
         set((s) => ({
-          tiposAuto: s.tiposAuto.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+          tiposTrabajo: s.tiposTrabajo.map((t) => (t.id === id ? { ...t, ...patch } : t)),
         })),
-      removeTipoAuto: (id) =>
-        set((s) => ({ tiposAuto: s.tiposAuto.filter((t) => t.id !== id) })),
-      reorderTiposAuto: (orderedIds) =>
+      removeTipoTrabajo: (id) =>
+        set((s) => ({ tiposTrabajo: s.tiposTrabajo.filter((t) => t.id !== id) })),
+      reorderTiposTrabajo: (orderedIds) =>
         set((s) => ({
-          tiposAuto: orderedIds
-            .map((id) => s.tiposAuto.find((t) => t.id === id))
+          tiposTrabajo: orderedIds
+            .map((id) => s.tiposTrabajo.find((t) => t.id === id))
             .filter(Boolean),
         })),
 
@@ -149,7 +149,7 @@ export const useStore = create(
               categoriaId: null,
               titulo: '',
               descripcion: '',
-              precios: {},
+              precioVenta: { valor: 0, moneda: 'ARS' },
               productoIds: [],
               manoObra: { valor: 0, moneda: 'ARS' },
               opciones: [],
@@ -202,9 +202,7 @@ export const useStore = create(
         set((s) => ({
           items: s.items.map((it) => {
             if (categoriaId && it.categoriaId !== categoriaId) return it
-            const precios = Object.fromEntries(
-              Object.entries(it.precios || {}).map(([k, v]) => [k, scaleMoneyBy(v, factor)])
-            )
+            const precioVenta = scaleMoneyBy(it.precioVenta, factor)
             const opciones = (it.opciones || []).map((op) => {
               if (op.tipo === 'select') {
                 return {
@@ -231,7 +229,7 @@ export const useStore = create(
               }
               return op
             })
-            return { ...it, precios, opciones }
+            return { ...it, precioVenta, opciones }
           }),
         }))
       },
@@ -282,8 +280,9 @@ export const useStore = create(
 
       importData: (obj) => {
         if (!obj || typeof obj !== 'object') throw new Error('JSON inválido')
+        const data = migrateData(obj)
         const patch = {}
-        for (const k of DATA_KEYS) if (k in obj) patch[k] = obj[k]
+        for (const k of DATA_KEYS) if (k in data) patch[k] = data[k]
         if (Object.keys(patch).length === 0) throw new Error('El archivo no tiene datos reconocibles')
         set(patch)
       },
@@ -291,6 +290,7 @@ export const useStore = create(
     {
       name: STORAGE_KEY,
       version: SEED_VERSION,
+      migrate: (persisted) => migrateData(persisted),
       partialize: (s) => {
         const out = {}
         for (const k of DATA_KEYS) out[k] = s[k]

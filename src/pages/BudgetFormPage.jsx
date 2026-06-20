@@ -11,7 +11,7 @@ import { CategoriaSection } from '@/features/form/CategoriaSection'
 import { CierreSection } from '@/features/form/CierreSection'
 import { CrearWizard } from '@/features/form/CrearWizard'
 import { SummaryBar } from '@/features/form/SummaryBar'
-import { materializeItem, blankItem, repriceItem } from '@/lib/budget'
+import { materializeItem, blankItem } from '@/lib/budget'
 import { computeTotals, itemFinalARS } from '@/lib/calc'
 import { formatNro } from '@/lib/format'
 
@@ -22,11 +22,10 @@ export function BudgetFormPage() {
   const createDraft = useStore((s) => s.createDraft)
   const getBudget = useStore((s) => s.getBudget)
   const saveBudget = useStore((s) => s.saveBudget)
-  const addTipoAuto = useStore((s) => s.addTipoAuto)
   const addFormaPago = useStore((s) => s.addFormaPago)
 
   const config = useStore((s) => s.config)
-  const tiposAuto = useStore((s) => s.tiposAuto)
+  const tiposTrabajo = useStore((s) => s.tiposTrabajo)
   const formasPago = useStore((s) => s.formasPago)
   const categorias = useStore((s) => s.categorias)
   const catalogoItems = useStore((s) => s.items)
@@ -75,7 +74,7 @@ export function BudgetFormPage() {
   if (!draft) return null
 
   const cot = draft.cotizacionUsd
-  const ctx = { tiposAuto, productos, items: catalogoItems, categorias }
+  const ctx = { productos, items: catalogoItems, categorias }
   const totals = computeTotals(draft)
   const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden)
 
@@ -93,13 +92,7 @@ export function BudgetFormPage() {
   const patchCliente = (p) =>
     setDraft((d) => ({ ...d, cliente: { ...d.cliente, ...p } }))
   const patchVehiculo = (p) =>
-    setDraft((d) => {
-      let items = d.items
-      if ('tipoAutoId' in p && p.tipoAutoId !== d.vehiculo.tipoAutoId) {
-        items = d.items.map((it) => repriceItem(it, p.tipoAutoId, ctx))
-      }
-      return { ...d, vehiculo: { ...d.vehiculo, ...p }, items }
-    })
+    setDraft((d) => ({ ...d, vehiculo: { ...d.vehiculo, ...p } }))
   const updateItem = (itemId, p) =>
     setDraft((d) => ({
       ...d,
@@ -112,7 +105,7 @@ export function BudgetFormPage() {
       if (d.items.some((it) => it.catalogoItemId === ci.id)) {
         return { ...d, items: d.items.filter((it) => it.catalogoItemId !== ci.id) }
       }
-      return { ...d, items: [...d.items, materializeItem(ci, d.vehiculo.tipoAutoId, ctx)] }
+      return { ...d, items: [...d.items, materializeItem(ci, ctx)] }
     })
   const addBlank = (catId) => {
     const cat = categorias.find((c) => c.id === catId)
@@ -122,18 +115,18 @@ export function BudgetFormPage() {
   // Completa el wizard: fija el tipo de vehículo y precarga los ítems del
   // paquete elegido (o arranca vacío si es manual). Reemplaza los ítems del
   // borrador para no arrastrar la precarga inicial de createDraft.
-  const completeWizard = (nombre, tipoAutoId, paquete) => {
+  const completeWizard = (nombre, tipoTrabajo, paquete) => {
     setDraft((d) => {
       const items = paquete
         ? (paquete.itemIds || [])
             .map((iid) => catalogoItems.find((c) => c.id === iid))
             .filter(Boolean)
-            .map((ci) => materializeItem(ci, tipoAutoId, ctx))
+            .map((ci) => materializeItem(ci, ctx))
         : []
       return {
         ...d,
         cliente: { ...d.cliente, nombre: nombre.trim() },
-        vehiculo: { ...d.vehiculo, tipoAutoId },
+        tipoTrabajo,
         items,
       }
     })
@@ -177,7 +170,7 @@ export function BudgetFormPage() {
 
       {!wizardDone ? (
         <CrearWizard
-          tiposAuto={tiposAuto}
+          tiposTrabajo={tiposTrabajo}
           paquetes={paquetes}
           paqueteDestacadoId={config.paqueteDestacadoId}
           ctx={ctx}
@@ -230,8 +223,6 @@ export function BudgetFormPage() {
               <VehiculoSection
                 vehiculo={draft.vehiculo}
                 onChange={patchVehiculo}
-                tiposAuto={tiposAuto}
-                onAddTipoAuto={(name) => addTipoAuto(name)}
                 plain
               />
             </TabsContent>
@@ -242,8 +233,6 @@ export function BudgetFormPage() {
                   categoria={cat}
                   catalogItems={catalogoItems.filter((i) => i.categoriaId === cat.id)}
                   draftItems={draft.items.filter((it) => it.categoriaId === cat.id)}
-                  tiposAuto={tiposAuto}
-                  tipoAutoId={draft.vehiculo.tipoAutoId}
                   cotizacionUsd={cot}
                   productosCatalogo={productos}
                   onToggleItem={toggleCatalogItem}
@@ -294,6 +283,7 @@ export function BudgetFormPage() {
           <SummaryBar
             presupuesto={draft}
             totals={totals}
+            tiposTrabajo={tiposTrabajo}
             itemsResumen={itemsResumen}
             onPatch={patch}
             onGenerar={onGenerar}

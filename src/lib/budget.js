@@ -1,11 +1,11 @@
 import { uid } from './id'
-import { resolveMatrixPrice, emptyMoney, IVA_DEFAULT } from './calc'
+import { emptyMoney, IVA_DEFAULT } from './calc'
 
 // Materializa un ítem del catálogo en un snapshot editable del presupuesto.
-// Congela precio (segun tipo de auto), opciones, productos y mano de obra.
-export function materializeItem(catalogItem, tipoAutoId, ctx) {
-  const { tiposAuto, productos, categorias } = ctx
-  const precioVenta = resolveMatrixPrice(catalogItem, tipoAutoId, tiposAuto)
+// Congela precio, opciones, productos y mano de obra.
+export function materializeItem(catalogItem, ctx) {
+  const { productos, categorias } = ctx
+  const precioVenta = catalogItem.precioVenta || emptyMoney()
   const categoria = (categorias || []).find((c) => c.id === catalogItem.categoriaId)
 
   const seleccion = {}
@@ -62,18 +62,10 @@ export function blankItem(categoriaId, categoriaNombre = '') {
   }
 }
 
-// Recalcula el precio base de un ítem ya materializado al cambiar el tipo de auto.
-export function repriceItem(item, tipoAutoId, ctx) {
-  const catalogItem = ctx.items.find((c) => c.id === item.catalogoItemId)
-  if (!catalogItem) return item // ítem manual: no se reprecia
-  const precioVenta = resolveMatrixPrice(catalogItem, tipoAutoId, ctx.tiposAuto)
-  return { ...item, precioVenta: { ...precioVenta } }
-}
-
 // Crea un presupuesto borrador con defaults (sin N°: se asigna al guardar).
 export function createDraft(state) {
-  const { config, paquetes, items, tiposAuto, productos, categorias, formasPago } = state
-  const ctx = { tiposAuto, productos, items, categorias }
+  const { config, paquetes, items, productos, categorias, formasPago } = state
+  const ctx = { productos, items, categorias }
 
   // Preselecciona el paquete destacado (más vendido).
   let draftItems = []
@@ -82,7 +74,7 @@ export function createDraft(state) {
     draftItems = (destacado.itemIds || [])
       .map((id) => items.find((it) => it.id === id))
       .filter(Boolean)
-      .map((ci) => materializeItem(ci, null, ctx))
+      .map((ci) => materializeItem(ci, ctx))
   }
 
   return {
@@ -100,10 +92,10 @@ export function createDraft(state) {
     vehiculo: {
       descripcion: '',
       patente: '',
-      tipoAutoId: null,
       estado: '',
       observaciones: '',
     },
+    tipoTrabajo: null,
     items: draftItems,
     tiempoEstimado: '',
     formaPago:

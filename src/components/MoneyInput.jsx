@@ -61,7 +61,7 @@ export function MoneyInput({
             if (!Number.isNaN(num)) onChange({ ...money, valor: num })
           }}
           placeholder={placeholder}
-          className="rounded-l-none pr-10"
+          className="h-full rounded-l-none pr-10"
         />
         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground/60">
           {money.moneda}

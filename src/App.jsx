@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
-// import { AuthGate } from '@/components/AuthGate' // TODO: reactivar pantalla de contraseña
+import { AccountGate } from '@/components/AccountGate'
 import { DbSync } from '@/components/DbSync'
 import { BudgetListPage } from '@/pages/BudgetListPage'
 import { BudgetFormPage } from '@/pages/BudgetFormPage'
@@ -16,10 +16,11 @@ function App() {
         <Route path="ver/:id" element={<SharedBudgetPage />} />
         <Route
           element={
-            // TODO: reactivar <AuthGate> envolviendo a <DbSync>
-            <DbSync>
-              <AppLayout />
-            </DbSync>
+            <AccountGate>
+              <DbSync>
+                <AppLayout />
+              </DbSync>
+            </AccountGate>
           }
         >
           <Route index element={<BudgetListPage />} />

@@ -1,7 +1,7 @@
 // Datos de ejemplo (seed) — PRD §10. Se cargan en localStorage al primer arranque.
 import { IVA_DEFAULT } from '@/lib/calc'
 
-export const SEED_VERSION = 1
+export const SEED_VERSION = 2
 export const STORAGE_KEY = 'presupuestoring'
 
 // Helpers de moneda / delta
@@ -10,23 +10,63 @@ const mUSD = (valor) => ({ valor, moneda: 'USD' })
 const dMonto = (money) => ({ modo: 'monto', monto: money })
 const dPct = (pct) => ({ modo: 'pct', pct })
 
-// Tipos de auto con multiplicador sobre el precio base (Mediano).
-const TIPOS_AUTO = [
-  { id: 'chico', nombre: 'Chico', multiplicador: 0.85, icono: 'car' },
-  { id: 'mediano', nombre: 'Mediano', multiplicador: 1.0, base: true, icono: 'car-front' },
-  { id: 'suv', nombre: 'SUV', multiplicador: 1.25, icono: 'truck' },
-  { id: 'pickup', nombre: 'Pickup', multiplicador: 1.3, icono: 'truck' },
-  { id: 'premium', nombre: 'Premium / Alta gama', multiplicador: 1.5, icono: 'car-taxi' },
+// Tipos de trabajo demo (multiplican el total del presupuesto). Opcional por rubro.
+const TIPOS_TRABAJO_DEMO = [
+  { id: 'auto-chico', nombre: 'Auto chico', multiplicador: 1.0 },
+  { id: 'suv', nombre: 'SUV', multiplicador: 1.5 },
+  { id: 'pickup', nombre: 'Pickup grande', multiplicador: 2.0 },
 ]
 
-// Construye la matriz de precios por tipo de auto a partir de un precio base (Mediano).
-function matrix(baseValor, moneda) {
-  const out = {}
-  for (const t of TIPOS_AUTO) {
-    const raw = baseValor * t.multiplicador
-    const valor = moneda === 'ARS' ? Math.round(raw / 100) * 100 : Math.round(raw)
-    out[t.id] = { valor, moneda }
+// Estado inicial de una cuenta nueva: vacío salvo lo que el usuario haya cargado
+// en el alta (productos, servicios, categorías, combos y tipos de trabajo).
+export function buildEmptyData(
+  nombre,
+  productos = [],
+  items = [],
+  categorias = [],
+  paquetes = [],
+  tiposTrabajo = []
+) {
+  return {
+    seedVersion: SEED_VERSION,
+    config: {
+      cotizacionUsd: 1200,
+      ivaPct: IVA_DEFAULT,
+      paqueteDestacadoId: null,
+      formaPagoDefaultId: null,
+    },
+    local: { nombre, telefono: '', direccion: '', email: '', logo: null },
+    tiposTrabajo,
+    formasPago: [],
+    categorias,
+    productos,
+    items,
+    paquetes,
+    presupuestos: [],
+    nextNro: 1,
   }
+}
+
+// Normaliza datos de versiones viejas (matriz de precios por tipo de auto) al
+// modelo nuevo (precio único por ítem + tipos de trabajo como multiplicador).
+export function migrateData(data) {
+  if (!data || typeof data !== 'object') return data
+  const out = { ...data }
+
+  if (Array.isArray(out.items)) {
+    out.items = out.items.map((it) => {
+      if (it.precioVenta || !it.precios) return it
+      const { precios, ...rest } = it
+      // Toma el precio "base" (mediano / ×1) o el primero disponible.
+      const base =
+        precios.mediano || Object.values(precios).find(Boolean) || { valor: 0, moneda: 'ARS' }
+      return { ...rest, precioVenta: { ...base } }
+    })
+  }
+
+  if (!Array.isArray(out.tiposTrabajo)) out.tiposTrabajo = []
+  delete out.tiposAuto
+
   return out
 }
 
@@ -84,7 +124,7 @@ export function buildSeed() {
       categoriaId: 'lavado-exterior',
       titulo: 'Lavado simple',
       descripcion: 'Prelavado, shampoo, secado con microfibra.',
-      precios: matrix(18000, 'ARS'),
+      precioVenta: mARS(18000),
       productoIds: ['shampoo-ph', 'microfibras'],
       manoObra: mARS(6000),
       opciones: [],
@@ -94,7 +134,7 @@ export function buildSeed() {
       categoriaId: 'lavado-exterior',
       titulo: 'Lavado + encerado',
       descripcion: 'Lavado completo + aplicación de cera de protección.',
-      precios: matrix(28000, 'ARS'),
+      precioVenta: mARS(28000),
       productoIds: ['shampoo-ph', 'cera-liquida', 'microfibras'],
       manoObra: mARS(9000),
       opciones: [],
@@ -105,7 +145,7 @@ export function buildSeed() {
       categoriaId: 'limpieza-interior',
       titulo: 'Interior básico',
       descripcion: 'Aspirado, limpieza de plásticos y tableros.',
-      precios: matrix(22000, 'ARS'),
+      precioVenta: mARS(22000),
       productoIds: ['apc', 'renovador-plasticos', 'microfibras'],
       manoObra: mARS(8000),
       opciones: [],
@@ -115,7 +155,7 @@ export function buildSeed() {
       categoriaId: 'limpieza-interior',
       titulo: 'Interior profundo',
       descripcion: 'Aspirado, tapizados, alfombras, plásticos y vidrios.',
-      precios: matrix(40000, 'ARS'),
+      precioVenta: mARS(40000),
       productoIds: ['apc', 'microfibras'],
       manoObra: mARS(15000),
       opciones: [],
@@ -125,7 +165,7 @@ export function buildSeed() {
       categoriaId: 'limpieza-interior',
       titulo: 'Tratamiento de cuero',
       descripcion: 'Limpieza e hidratación de butacas de cuero.',
-      precios: matrix(35000, 'ARS'),
+      precioVenta: mARS(35000),
       productoIds: ['acond-cuero'],
       manoObra: mARS(12000),
       opciones: [
@@ -144,7 +184,7 @@ export function buildSeed() {
       categoriaId: 'limpieza-motor',
       titulo: 'Lavado de motor',
       descripcion: 'Desengrase y detallado del vano motor.',
-      precios: matrix(25000, 'ARS'),
+      precioVenta: mARS(25000),
       productoIds: ['desengrasante-motor', 'renovador-plasticos'],
       manoObra: mARS(10000),
       opciones: [],
@@ -155,7 +195,7 @@ export function buildSeed() {
       categoriaId: 'detailing',
       titulo: 'Descontaminación',
       descripcion: 'Clay bar + descontaminado químico de pintura.',
-      precios: matrix(38000, 'ARS'),
+      precioVenta: mARS(38000),
       productoIds: ['clay-bar', 'apc'],
       manoObra: mARS(14000),
       opciones: [],
@@ -165,7 +205,7 @@ export function buildSeed() {
       categoriaId: 'detailing',
       titulo: 'Pulido de pintura',
       descripcion: 'Corrección de pintura.',
-      precios: matrix(65000, 'ARS'),
+      precioVenta: mARS(65000),
       productoIds: ['pasta-pulido', 'microfibras'],
       manoObra: mARS(25000),
       opciones: [
@@ -199,7 +239,7 @@ export function buildSeed() {
       categoriaId: 'tratamientos',
       titulo: 'Sellador sintético',
       descripcion: 'Protección ~6 meses.',
-      precios: matrix(35000, 'ARS'),
+      precioVenta: mARS(35000),
       productoIds: ['sellador-sintetico'],
       manoObra: mARS(12000),
       opciones: [],
@@ -209,7 +249,7 @@ export function buildSeed() {
       categoriaId: 'tratamientos',
       titulo: 'Cerámico 9H',
       descripcion: 'Recubrimiento cerámico de larga durabilidad.',
-      precios: matrix(100, 'USD'),
+      precioVenta: mUSD(100),
       productoIds: ['ceramico-9h'],
       manoObra: mARS(45000),
       opciones: [
@@ -253,7 +293,7 @@ export function buildSeed() {
       categoriaId: 'extras',
       titulo: 'Renovado de plásticos',
       descripcion: 'Restauración de plásticos exteriores opacos.',
-      precios: matrix(14000, 'ARS'),
+      precioVenta: mARS(14000),
       productoIds: ['renovador-plasticos'],
       manoObra: mARS(5000),
       opciones: [],
@@ -263,7 +303,7 @@ export function buildSeed() {
       categoriaId: 'extras',
       titulo: 'Desinfección con ozono',
       descripcion: 'Eliminación de olores y bacterias.',
-      precios: matrix(18000, 'ARS'),
+      precioVenta: mARS(18000),
       productoIds: [],
       manoObra: mARS(7000),
       opciones: [],
@@ -292,7 +332,7 @@ export function buildSeed() {
     seedVersion: SEED_VERSION,
     config,
     local,
-    tiposAuto: TIPOS_AUTO.map((t) => ({ ...t })),
+    tiposTrabajo: TIPOS_TRABAJO_DEMO.map((t) => ({ ...t })),
     formasPago,
     categorias,
     productos,

@@ -85,7 +85,11 @@ export function buildWhatsappText(presupuesto, local, totals) {
     L.push('')
   }
 
-  L.push(`Subtotal: ${formatARS(totals.subtotal)}`)
+  L.push(`Subtotal: ${formatARS(totals.subtotalItems)}`)
+  if (totals.recargoTrabajo > 0)
+    L.push(
+      `${presupuesto.tipoTrabajo?.nombre || 'Tipo de trabajo'}: +${formatARS(totals.recargoTrabajo)}`
+    )
   if (totals.descuento > 0) L.push(`Bonificación: −${formatARS(totals.descuento)}`)
   if (presupuesto.ivaActivo) L.push(`IVA (${totals.ivaPct}%): ${formatARS(totals.iva)}`)
   L.push(`*Total: ${formatARS(totals.total)}*`)

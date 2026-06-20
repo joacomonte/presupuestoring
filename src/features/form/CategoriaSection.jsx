@@ -3,14 +3,12 @@ import { Section } from '@/components/Section'
 import { Badge } from '@/components/ui/badge'
 import { ItemCard } from './ItemCard'
 import { formatARS, formatMoney } from '@/lib/format'
-import { resolveMatrixPrice, itemFinalARS } from '@/lib/calc'
+import { itemFinalARS } from '@/lib/calc'
 
 export function CategoriaSection({
   categoria,
   catalogItems,
   draftItems,
-  tiposAuto,
-  tipoAutoId,
   cotizacionUsd,
   productosCatalogo,
   onToggleItem,
@@ -71,7 +69,7 @@ export function CategoriaSection({
             )}
             <div className="flex flex-col gap-2">
               {disponibles.map((ci) => {
-                const precio = resolveMatrixPrice(ci, tipoAutoId, tiposAuto)
+                const precio = ci.precioVenta || { valor: 0, moneda: 'ARS' }
                 return (
                   <button
                     key={ci.id}

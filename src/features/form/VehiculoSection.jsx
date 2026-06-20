@@ -3,20 +3,15 @@ import { Section } from '@/components/Section'
 import { Field } from '@/components/Field'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { InlineCombobox } from '@/components/InlineCombobox'
 
 export function VehiculoSection({
   vehiculo,
   onChange,
-  tiposAuto,
-  onAddTipoAuto,
   open,
   onOpenChange,
   plain,
 }) {
-  const tipo = tiposAuto.find((t) => t.id === vehiculo.tipoAutoId)
-  const summary =
-    [vehiculo.descripcion, tipo?.nombre].filter(Boolean).join(' · ') || null
+  const summary = vehiculo.descripcion || null
 
   return (
     <Section
@@ -47,20 +42,6 @@ export function VehiculoSection({
             />
           </Field>
         </div>
-
-        <Field
-          label="Tipo de vehículo"
-          hint="Precarga los precios de cada ítem según la matriz."
-        >
-          <InlineCombobox
-            id="veh-tipo"
-            options={tiposAuto.map((t) => ({ value: t.id, label: t.nombre }))}
-            value={vehiculo.tipoAutoId}
-            onChange={(tipoAutoId) => onChange({ tipoAutoId })}
-            onAdd={onAddTipoAuto}
-            placeholder="Elegir tipo de vehículo…"
-          />
-        </Field>
 
         <Field label="Estado actual" htmlFor="veh-estado">
           <Textarea

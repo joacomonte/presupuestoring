@@ -14,27 +14,6 @@ export function emptyMoney(moneda = 'ARS') {
   return { valor: 0, moneda }
 }
 
-// Precio del ítem en la matriz para un tipo de auto, con fallback por multiplicador.
-export function resolveMatrixPrice(item, tipoAutoId, tiposAuto) {
-  const precios = item.precios || {}
-  if (tipoAutoId && precios[tipoAutoId]) return { ...precios[tipoAutoId] }
-
-  const baseTipo =
-    tiposAuto.find((t) => t.base) ||
-    tiposAuto.find((t) => Number(t.multiplicador) === 1) ||
-    tiposAuto[0]
-  const basePrice = baseTipo ? precios[baseTipo.id] : null
-  const tipo = tiposAuto.find((t) => t.id === tipoAutoId)
-
-  if (basePrice && tipo && baseTipo && baseTipo.multiplicador) {
-    const ratio = (Number(tipo.multiplicador) || 1) / Number(baseTipo.multiplicador)
-    return { valor: roundPrice(basePrice.valor * ratio), moneda: basePrice.moneda }
-  }
-  if (basePrice) return { ...basePrice }
-  const first = Object.values(precios)[0]
-  return first ? { ...first } : emptyMoney()
-}
-
 export function roundPrice(n) {
   // Redondeo "comercial" al $100 para ARS; USD se deja entero.
   return Math.round((Number(n) || 0) / 100) * 100
@@ -84,7 +63,11 @@ export function aplicarPorcentajeOMonto(base, regla) {
 export function computeTotals(presupuesto) {
   const cot = Number(presupuesto.cotizacionUsd) || 0
   const items = presupuesto.items || []
-  const subtotal = subtotalARS(items, cot)
+  // Subtotal de ítems, luego multiplicador del "tipo de trabajo" (opcional).
+  const subtotalItems = subtotalARS(items, cot)
+  const multiplicadorTrabajo = Number(presupuesto.tipoTrabajo?.multiplicador) || 1
+  const subtotal = subtotalItems * multiplicadorTrabajo
+  const recargoTrabajo = subtotal - subtotalItems
   const descuento = Math.min(
     aplicarPorcentajeOMonto(subtotal, presupuesto.descuento),
     subtotal
@@ -99,6 +82,9 @@ export function computeTotals(presupuesto) {
   const ganancia = baseImponible - costo // ganancia tras bonificación (sin IVA)
 
   return {
+    subtotalItems,
+    multiplicadorTrabajo,
+    recargoTrabajo,
     subtotal,
     descuento,
     baseImponible,

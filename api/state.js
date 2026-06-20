@@ -24,6 +24,17 @@ function cleanUser(u) {
 export default async function handler(req, res) {
   try {
     await ensureTable()
+
+    // Listado de cuentas: deriva el nombre del propio JSON (sin tocar el schema).
+    if (req.method === 'GET' && req.query.list) {
+      const rows = await sql`
+        SELECT user_id, data->'local'->>'nombre' AS nombre
+        FROM app_state
+        ORDER BY updated_at DESC
+      `
+      return res.status(200).json({ accounts: rows })
+    }
+
     const user = cleanUser(req.query.user)
     if (!user) return res.status(400).json({ error: 'missing or invalid user' })
 
@@ -45,7 +56,12 @@ export default async function handler(req, res) {
       return res.status(200).json({ data: rows[0].data })
     }
 
-    res.setHeader('Allow', 'GET, POST')
+    if (req.method === 'DELETE') {
+      await sql`DELETE FROM app_state WHERE user_id = ${user}`
+      return res.status(200).json({ ok: true })
+    }
+
+    res.setHeader('Allow', 'GET, POST, DELETE')
     return res.status(405).json({ error: 'method not allowed' })
   } catch (e) {
     console.error(e)
