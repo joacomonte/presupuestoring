@@ -2,19 +2,9 @@ import { useState } from 'react'
 import { ChevronUp, FileCheck2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { MontoUnidad } from '@/components/MontoUnidad'
-import { explicarMultiplicador } from '@/components/MultiplicadorInput'
 import { formatARS } from '@/lib/format'
 import { cn } from '@/lib/utils'
-
-const NINGUNO = '__ninguno__'
 
 function Row({ label, value, strong, accent, onClick }) {
   return (
@@ -45,7 +35,6 @@ function Row({ label, value, strong, accent, onClick }) {
 export function SummaryBar({
   presupuesto,
   totals,
-  tiposTrabajo = [],
   itemsResumen,
   onPatch,
   onGenerar,
@@ -57,16 +46,6 @@ export function SummaryBar({
   const patchDescuento = (patch) =>
     onPatch({ descuento: { ...presupuesto.descuento, ...patch } })
   const patchSena = (patch) => onPatch({ sena: { ...presupuesto.sena, ...patch } })
-
-  const setTipoTrabajo = (id) => {
-    if (id === NINGUNO) return onPatch({ tipoTrabajo: null })
-    const t = tiposTrabajo.find((x) => x.id === id)
-    onPatch({
-      tipoTrabajo: t
-        ? { id: t.id, nombre: t.nombre, multiplicador: t.multiplicador }
-        : null,
-    })
-  }
 
   const jump = (id) => {
     setExpanded(false)
@@ -118,39 +97,6 @@ export function SummaryBar({
               )}
 
               <Row label="Subtotal" value={formatARS(totals.subtotalItems)} />
-
-              {/* Tipo de trabajo (multiplica el total) */}
-              {tiposTrabajo.length > 0 && (
-                <div className="my-2 rounded-lg bg-muted/50 p-2.5">
-                  <div className="mb-2 text-sm font-medium">Tipo de trabajo</div>
-                  <Select
-                    value={presupuesto.tipoTrabajo?.id || NINGUNO}
-                    onValueChange={setTipoTrabajo}
-                  >
-                    <SelectTrigger id="sb-tipo-trabajo" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NINGUNO}>No incluir</SelectItem>
-                      {tiposTrabajo.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.nombre} ({Number(t.multiplicador)}×)
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {totals.recargoTrabajo > 0 && (
-                    <p className="mt-2 text-sm tabular-nums">
-                      {presupuesto.tipoTrabajo?.nombre} ×{Number(presupuesto.tipoTrabajo?.multiplicador)}{' '}
-                      <span className="font-semibold">+{formatARS(totals.recargoTrabajo)}</span>
-                      <span className="text-muted-foreground">
-                        {' · '}
-                        {explicarMultiplicador(presupuesto.tipoTrabajo?.multiplicador)}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              )}
 
               {/* Bonificación a ojo */}
               <div className="my-2 rounded-lg bg-muted/50 p-2.5">

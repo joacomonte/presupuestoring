@@ -1,42 +1,34 @@
 import { useState } from 'react'
-import { ArrowLeft, Package, PencilLine, Gauge } from 'lucide-react'
+import { ArrowLeft, Package, PencilLine } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { materializeItem } from '@/lib/budget'
 import { itemFinalARS } from '@/lib/calc'
 import { formatARS } from '@/lib/format'
-import { explicarMultiplicador } from '@/components/MultiplicadorInput'
 
 // Paso previo a la creación del presupuesto:
 //  1. Nombre del cliente.
-//  2. Tipo de trabajo (multiplica el total) — opcional, solo si hay tipos definidos.
-//  3. Paquete predefinido (precarga ítems) o manual (arranca vacío).
+//  2. Plantilla predefinida (precarga ítems) o manual (arranca vacío).
 export function CrearWizard({
-  tiposTrabajo,
-  paquetes,
-  paqueteDestacadoId,
+  plantillas,
+  plantillaDestacadaId,
   ctx,
   cotizacionUsd,
   onComplete,
 }) {
-  const usaTipoTrabajo = (tiposTrabajo || []).length > 0
   const [step, setStep] = useState(1)
   const [nombre, setNombre] = useState('')
-  const [tipoTrabajo, setTipoTrabajo] = useState(null)
 
-  // Paso final (paquete) es 2 si no hay tipos de trabajo, 3 si los hay.
-  const stepPaquete = usaTipoTrabajo ? 3 : 2
-
-  // Resumen del paquete: ítems incluidos y costo estimado (con el multiplicador elegido).
-  const resumenPaquete = (paq) => {
-    const itemsCat = (paq.itemIds || [])
+  // Resumen de la plantilla: ítems incluidos y costo estimado.
+  const resumenPlantilla = (plt) => {
+    const itemsCat = (plt.itemIds || [])
       .map((iid) => ctx.items.find((c) => c.id === iid))
       .filter(Boolean)
     const titulos = itemsCat.map((ci) => ci.titulo)
-    const mult = Number(tipoTrabajo?.multiplicador) || 1
-    const estimadoARS =
-      itemsCat.reduce((s, ci) => s + itemFinalARS(materializeItem(ci, ctx), cotizacionUsd), 0) *
-      mult
+    const estimadoARS = itemsCat.reduce(
+      (s, ci) => s + itemFinalARS(materializeItem(ci, ctx), cotizacionUsd),
+      0
+    )
     return { titulos, estimadoARS }
   }
 
@@ -46,7 +38,7 @@ export function CrearWizard({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault()
-          setStep(usaTipoTrabajo ? 2 : stepPaquete)
+          setStep(2)
         }}
       >
         <div>
@@ -69,92 +61,43 @@ export function CrearWizard({
     )
   }
 
-  if (usaTipoTrabajo && step === 2) {
-    const elegir = (tt) => {
-      setTipoTrabajo(tt)
-      setStep(stepPaquete)
-    }
-    return (
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-base font-semibold">¿Qué tipo de trabajo es?</h2>
-          <p className="text-sm text-muted-foreground">
-            Multiplica el total. Es opcional: podés no incluirlo.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-2">
-          <button
-            type="button"
-            id="wiz-tt-ninguno"
-            onClick={() => elegir(null)}
-            className="flex items-center gap-3 rounded-xl border border-dashed bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
-          >
-            <span className="font-medium">No incluir</span>
-          </button>
-          {tiposTrabajo.map((t) => (
-            <button
-              key={t.id}
-              id={`wiz-tt-${t.id}`}
-              type="button"
-              onClick={() => elegir({ id: t.id, nombre: t.nombre, multiplicador: t.multiplicador })}
-              className="flex items-center gap-3 rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
-            >
-              <Gauge className="size-5 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1">
-                <span className="block font-medium leading-tight">{t.nombre}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {Number(t.multiplicador)}× · {explicarMultiplicador(t.multiplicador)}
-                </span>
-              </span>
-            </button>
-          ))}
-        </div>
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full"
-          onClick={() => setStep(1)}
-          aria-label="Volver al paso anterior"
-        >
-          <ArrowLeft className="size-5" />
-          Volver
-        </Button>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-base font-semibold">¿Paquete o desde cero?</h2>
+        <h2 className="text-base font-semibold">¿Plantilla o desde cero?</h2>
         <p className="text-sm text-muted-foreground">
-          Elegí un combo predefinido o armalo manualmente.
+          Elegí una plantilla predefinida o armalo manualmente.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {paquetes.map((paq) => {
-          const { titulos, estimadoARS } = resumenPaquete(paq)
+        {plantillas.map((plt) => {
+          const { titulos, estimadoARS } = resumenPlantilla(plt)
           return (
             <button
-              key={paq.id}
-              id={`wiz-paq-${paq.id}`}
+              key={plt.id}
+              id={`wiz-plt-${plt.id}`}
               type="button"
-              onClick={() => onComplete(nombre, tipoTrabajo, paq)}
+              onClick={() => onComplete(nombre, plt)}
               className="flex items-start gap-3 rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
             >
               <Package className="mt-0.5 size-6 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 font-medium">{paq.nombre}</span>
-                  {paq.id === paqueteDestacadoId && (
+                  <span className="min-w-0 flex-1 font-medium">{plt.nombre}</span>
+                  {plt.id === plantillaDestacadaId && (
                     <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      Más vendido
+                      Más usada
                     </span>
                   )}
                 </span>
-                {titulos.length > 0 && (
+                {plt.descripcion && (
                   <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {plt.descripcion}
+                  </span>
+                )}
+                {titulos.length > 0 && (
+                  <span className="mt-0.5 block text-xs text-muted-foreground/80">
                     {titulos.join(' · ')}
                   </span>
                 )}
@@ -171,7 +114,7 @@ export function CrearWizard({
         <button
           id="wiz-manual"
           type="button"
-          onClick={() => onComplete(nombre, tipoTrabajo, null)}
+          onClick={() => onComplete(nombre, null)}
           className="flex items-center gap-3 rounded-xl border border-dashed bg-card p-4 text-left shadow-sm transition hover:border-primary hover:bg-accent"
         >
           <PencilLine className="size-6 shrink-0 text-muted-foreground" />
@@ -183,7 +126,7 @@ export function CrearWizard({
         variant="outline"
         size="lg"
         className="w-full"
-        onClick={() => setStep(usaTipoTrabajo ? 2 : 1)}
+        onClick={() => setStep(1)}
         aria-label="Volver al paso anterior"
       >
         <ArrowLeft className="size-5" />

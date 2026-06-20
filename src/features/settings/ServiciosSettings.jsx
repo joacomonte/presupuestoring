@@ -1,21 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, GripVertical, Plus, Search, Trash2, X } from 'lucide-react'
-import {
-  DndContext,
-  PointerSensor,
-  KeyboardSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core'
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+import { ChevronDown, Plus, Search, Trash2, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   Command,
@@ -118,7 +102,7 @@ function ItemEditor({ item, categorias, productos, cotizacionUsd, onUpdate, onRe
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{item.titulo || 'Sin título'}</div>
           <div className="truncate text-xs text-muted-foreground">
-            {categoria?.nombre || 'Sin categoría'}
+            {categoria?.nombre || 'Sin sección'}
           </div>
         </div>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
@@ -134,7 +118,7 @@ function ItemEditor({ item, categorias, productos, cotizacionUsd, onUpdate, onRe
                   onChange={(e) => onUpdate({ titulo: e.target.value })}
                 />
               </Field>
-              <Field label="Categoría">
+              <Field label="Sección">
                 <Select
                   value={item.categoriaId || ''}
                   onValueChange={(v) => onUpdate({ categoriaId: v })}
@@ -165,7 +149,7 @@ function ItemEditor({ item, categorias, productos, cotizacionUsd, onUpdate, onRe
           {/* Precio de venta */}
           <Section
             title="Precio de venta"
-            subtitle="Precio base del servicio. Si usás tipos de trabajo, el multiplicador se aplica al total del presupuesto."
+            subtitle="Precio base del servicio."
           >
             <MoneyInput
               value={item.precioVenta || { valor: 0, moneda: 'ARS' }}
@@ -263,21 +247,6 @@ function ItemEditor({ item, categorias, productos, cotizacionUsd, onUpdate, onRe
             </div>
           </Section>
 
-          {/* Opciones / variantes */}
-          <Section title="Opciones / variantes">
-            <Textarea
-              value={item.opcionesTexto || ''}
-              onChange={(e) => onUpdate({ opcionesTexto: e.target.value })}
-              rows={4}
-              placeholder={
-                'Anotá a mano las opciones y variantes. Por ejemplo:\n' +
-                '- Selección: Base 1 ($10.000) / Base 2 ($20.000)\n' +
-                '- Add-ons: Cera líquida (+$10.000), Pulido (+$5.000)\n' +
-                '- Cantidad: $5.000 c/u (default 1)'
-              }
-            />
-          </Section>
-
           <div className="mt-4 border-t pt-3">
             <Button
               variant="ghost"
@@ -294,45 +263,6 @@ function ItemEditor({ item, categorias, productos, cotizacionUsd, onUpdate, onRe
   )
 }
 
-function SortableCategoria({ cat, onUpdate, onDelete }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: cat.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : undefined,
-  }
-
-  return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
-      <button
-        type="button"
-        className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
-        aria-label="Reordenar categoría"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="size-4" />
-      </button>
-      <Input
-        value={cat.nombre}
-        onChange={(e) => onUpdate({ nombre: e.target.value })}
-        className="flex-1"
-      />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-        onClick={onDelete}
-        aria-label="Eliminar categoría"
-      >
-        <Trash2 className="size-4" />
-      </Button>
-    </div>
-  )
-}
-
 export function ServiciosSettings() {
   const items = useStore((s) => s.items)
   const categorias = useStore((s) => s.categorias)
@@ -341,16 +271,6 @@ export function ServiciosSettings() {
   const addItem = useStore((s) => s.addItem)
   const updateItem = useStore((s) => s.updateItem)
   const removeItem = useStore((s) => s.removeItem)
-
-  const addCategoria = useStore((s) => s.addCategoria)
-  const updateCategoria = useStore((s) => s.updateCategoria)
-  const removeCategoria = useStore((s) => s.removeCategoria)
-  const reorderCategorias = useStore((s) => s.reorderCategorias)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
 
   const [query, setQuery] = useState('')
   const [openCats, setOpenCats] = useState({})
@@ -366,14 +286,6 @@ export function ServiciosSettings() {
 
   const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden)
 
-  const handleDragEnd = ({ active, over }) => {
-    if (!over || active.id === over.id) return
-    const ids = categoriasOrdenadas.map((c) => c.id)
-    const oldIndex = ids.indexOf(active.id)
-    const newIndex = ids.indexOf(over.id)
-    reorderCategorias(arrayMove(ids, oldIndex, newIndex))
-  }
-
   const q = query.trim().toLowerCase()
   const itemsFiltrados = q
     ? items.filter((it) => it.titulo?.toLowerCase().includes(q))
@@ -385,53 +297,8 @@ export function ServiciosSettings() {
   })
 
   return (
-    <div className="space-y-6">
-      {/* Categorías de servicio */}
+    <div>
       <div>
-        <div className="mb-3">
-          <h3 className="mb-1 text-sm font-semibold">Categorías de servicio</h3>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Agrupan los servicios (ej. Lavado, Pulido, Tratamientos) para ordenarlos en el catálogo y en el presupuesto. Arrastrá para cambiar el orden en que aparecen.
-          </p>
-        </div>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={categoriasOrdenadas.map((c) => c.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-2">
-              {categoriasOrdenadas.map((c) => (
-                <SortableCategoria
-                  key={c.id}
-                  cat={c}
-                  onUpdate={(patch) => updateCategoria(c.id, patch)}
-                  onDelete={() => removeCategoria(c.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-        <Button
-          variant="outline"
-          size="sm"
-          className="mt-2"
-          onClick={() => addCategoria('Nueva categoría')}
-        >
-          <Plus className="size-4" /> Agregar categoría
-        </Button>
-      </div>
-
-      <div className="border-t pt-4">
-        <div className="mb-4">
-          <h3 className="mb-1 text-sm font-semibold">Servicios individuales</h3>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Cada servicio que ofrecés, dentro de su categoría. Definís su precio, los productos que consume (para tu costo) y variantes opcionales. Después los sumás a un presupuesto sueltos o dentro de un paquete.
-          </p>
-        </div>
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -443,7 +310,7 @@ export function ServiciosSettings() {
           />
         </div>
         <div className="space-y-2">
-          {[...categoriasOrdenadas, { id: null, nombre: 'Sin categoría' }].map((cat) => {
+          {[...categoriasOrdenadas, { id: null, nombre: 'Sin sección' }].map((cat) => {
             const itemsCat = itemsOrdenados.filter((it) =>
               cat.id === null
                 ? !categorias.some((c) => c.id === it.categoriaId)

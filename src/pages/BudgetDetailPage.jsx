@@ -126,14 +126,6 @@ export function BudgetDetailPage() {
             <span className="text-muted-foreground">Subtotal</span>
             <span className="tabular-nums">{formatARS(totals.subtotalItems)}</span>
           </div>
-          {totals.recargoTrabajo > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">
-                {presupuesto.tipoTrabajo?.nombre || 'Tipo de trabajo'}
-              </span>
-              <span className="tabular-nums">+{formatARS(totals.recargoTrabajo)}</span>
-            </div>
-          )}
           <div className="flex justify-between">
             <span className="text-muted-foreground">Costos (productos + MO)</span>
             <span className="tabular-nums">{formatARS(totals.costo)}</span>

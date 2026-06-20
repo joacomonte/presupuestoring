@@ -25,12 +25,11 @@ export function BudgetFormPage() {
   const addFormaPago = useStore((s) => s.addFormaPago)
 
   const config = useStore((s) => s.config)
-  const tiposTrabajo = useStore((s) => s.tiposTrabajo)
   const formasPago = useStore((s) => s.formasPago)
   const categorias = useStore((s) => s.categorias)
   const catalogoItems = useStore((s) => s.items)
   const productos = useStore((s) => s.productos)
-  const paquetes = useStore((s) => s.paquetes)
+  const plantillas = useStore((s) => s.plantillas)
 
   const [draft, setDraft] = useState(() =>
     id
@@ -40,7 +39,7 @@ export function BudgetFormPage() {
       : createDraft()
   )
   const [saving, setSaving] = useState(false)
-  // Presupuestos nuevos pasan por el wizard (tipo de vehículo + paquete/manual);
+  // Presupuestos nuevos pasan por el wizard (nombre + plantilla/manual);
   // al editar uno existente se salta directo al formulario.
   const [wizardDone, setWizardDone] = useState(!!id)
   const [tab, setTab] = useState('cliente')
@@ -112,13 +111,13 @@ export function BudgetFormPage() {
     setDraft((d) => ({ ...d, items: [...d.items, blankItem(catId, cat?.nombre || '')] }))
   }
 
-  // Completa el wizard: fija el tipo de vehículo y precarga los ítems del
-  // paquete elegido (o arranca vacío si es manual). Reemplaza los ítems del
-  // borrador para no arrastrar la precarga inicial de createDraft.
-  const completeWizard = (nombre, tipoTrabajo, paquete) => {
+  // Completa el wizard: precarga los ítems de la plantilla elegida (o arranca
+  // vacío si es manual). Reemplaza los ítems del borrador para no arrastrar la
+  // precarga inicial de createDraft.
+  const completeWizard = (nombre, plantilla) => {
     setDraft((d) => {
-      const items = paquete
-        ? (paquete.itemIds || [])
+      const items = plantilla
+        ? (plantilla.itemIds || [])
             .map((iid) => catalogoItems.find((c) => c.id === iid))
             .filter(Boolean)
             .map((ci) => materializeItem(ci, ctx))
@@ -126,7 +125,6 @@ export function BudgetFormPage() {
       return {
         ...d,
         cliente: { ...d.cliente, nombre: nombre.trim() },
-        tipoTrabajo,
         items,
       }
     })
@@ -170,9 +168,8 @@ export function BudgetFormPage() {
 
       {!wizardDone ? (
         <CrearWizard
-          tiposTrabajo={tiposTrabajo}
-          paquetes={paquetes}
-          paqueteDestacadoId={config.paqueteDestacadoId}
+          plantillas={plantillas}
+          plantillaDestacadaId={config.plantillaDestacadaId}
           ctx={ctx}
           cotizacionUsd={cot}
           onComplete={completeWizard}
@@ -283,7 +280,6 @@ export function BudgetFormPage() {
           <SummaryBar
             presupuesto={draft}
             totals={totals}
-            tiposTrabajo={tiposTrabajo}
             itemsResumen={itemsResumen}
             onPatch={patch}
             onGenerar={onGenerar}

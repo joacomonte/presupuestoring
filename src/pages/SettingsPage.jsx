@@ -4,7 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Layers,
-  Gauge,
+  Tags,
   Package,
   SlidersHorizontal,
 } from 'lucide-react'
@@ -14,10 +14,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { SaveBar } from '@/components/SaveBar'
 import { EjemplosDialog } from '@/components/EjemplosDialog'
 import { GeneralSettings } from '@/features/settings/GeneralSettings'
-import { CatalogosSettings } from '@/features/settings/CatalogosSettings'
 import { ProductosSettings } from '@/features/settings/ProductosSettings'
+import { SeccionesSettings } from '@/features/settings/SeccionesSettings'
 import { ServiciosSettings } from '@/features/settings/ServiciosSettings'
-import { PaquetesSettings } from '@/features/settings/PaquetesSettings'
+import { PlantillasSettings } from '@/features/settings/PlantillasSettings'
 import { DataSettings } from '@/features/settings/DataSettings'
 
 function OtrosSettings() {
@@ -31,26 +31,26 @@ function OtrosSettings() {
 
 const TABS = [
   {
-    value: 'tipos-trabajo',
-    icon: Gauge,
-    label: 'Tipo de trabajo',
-    desc: 'Definí tipos de trabajo que multiplican el total del presupuesto según el tamaño o la complejidad (auto chico, SUV, casa…). Es opcional.',
-    topic: 'tipos-trabajo',
-    Content: CatalogosSettings,
+    value: 'plantillas',
+    icon: Layers,
+    label: 'Plantillas',
+    desc: 'Presupuestos preconfigurados: definí qué secciones y servicios se cargan juntos al crear un presupuesto. Marcá una como Default para que aparezca elegida por defecto.',
+    topic: 'plantillas',
+    Content: PlantillasSettings,
   },
   {
-    value: 'paquetes',
-    icon: Layers,
-    label: 'Paquetes',
-    desc: 'Armá combos de servicios que se precargan juntos al crear un presupuesto. Marcá uno como Default para que aparezca elegido por defecto.',
-    topic: 'paquetes',
-    Content: PaquetesSettings,
+    value: 'secciones',
+    icon: Tags,
+    label: 'Secciones',
+    desc: 'Agrupan tus servicios para ordenarlos en el catálogo y en el presupuesto. Arrastrá para cambiar el orden; debajo de cada sección ves los servicios vinculados.',
+    topic: 'secciones',
+    Content: SeccionesSettings,
   },
   {
     value: 'servicios',
     icon: Boxes,
     label: 'Servicios',
-    desc: 'Tu catálogo de servicios con su precio. Agrupalos en categorías y sumales los productos y variantes que correspondan.',
+    desc: 'Tu catálogo de servicios con su precio. Asigná cada uno a una sección y sumale los productos y variantes que correspondan.',
     topic: 'servicios',
     Content: ServiciosSettings,
   },
@@ -151,7 +151,7 @@ export function SettingsPage() {
         </h1>
       </div>
 
-      <Tabs defaultValue="tipos-trabajo">
+      <Tabs defaultValue="plantillas">
         <TabScroller>
           <TabsList variant="line" className="h-auto w-auto justify-start gap-1">
             {TABS.map(({ value, icon: Icon, label }) => (

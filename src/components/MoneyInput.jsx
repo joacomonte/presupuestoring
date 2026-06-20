@@ -53,7 +53,7 @@ export function MoneyInput({
           onChange({ ...money, moneda: money.moneda === 'ARS' ? 'USD' : 'ARS' })
         }
         className={cn(
-          'flex w-14 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-l-md border border-r-0 bg-secondary text-xs font-semibold text-secondary-foreground transition hover:bg-accent active:scale-[0.97] disabled:opacity-100',
+          'flex w-14 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-l-md border border-r-0 bg-secondary py-1.5 text-xs font-semibold text-secondary-foreground transition hover:bg-accent active:scale-[0.97] disabled:opacity-100',
           !allowCurrencyToggle && 'cursor-default hover:bg-secondary'
         )}
       >

@@ -16,29 +16,6 @@ import {
 // Ejemplos de ayuda por tópico, pensados para distintos rubros (la app es genérica).
 // Cada tópico tiene un título, una bajada y una lista de rubros con ejemplos concretos.
 const EJEMPLOS = {
-  'tipos-trabajo': {
-    titulo: 'Tipos de trabajo',
-    bajada:
-      'Un tipo de trabajo multiplica el total del presupuesto. Sirve para cobrar más según el tamaño o la complejidad, sin recargar precios ítem por ítem. Es opcional: si no elegís ninguno, no multiplica nada.',
-    rubros: [
-      {
-        nombre: 'Detailing de autos',
-        items: ['Auto chico ×1.0', 'SUV ×1.5', 'Pickup grande ×2.0'],
-      },
-      {
-        nombre: 'Peluquería canina',
-        items: ['Perro chico ×1.0', 'Perro mediano ×1.4', 'Perro grande ×1.8'],
-      },
-      {
-        nombre: 'Limpieza',
-        items: ['Monoambiente ×1.0', '3 ambientes ×1.6', 'Casa ×2.5'],
-      },
-      {
-        nombre: 'Fotografía / eventos',
-        items: ['Media jornada ×1.0', 'Jornada completa ×1.8', 'Cobertura 2 días ×3.2'],
-      },
-    ],
-  },
   servicios: {
     titulo: 'Servicios',
     bajada:
@@ -62,9 +39,9 @@ const EJEMPLOS = {
       },
     ],
   },
-  categorias: {
-    titulo: 'Categorías',
-    bajada: 'Agrupan tus servicios para ordenarlos en el presupuesto.',
+  secciones: {
+    titulo: 'Secciones',
+    bajada: 'Agrupan tus servicios para ordenarlos en el catálogo y en el presupuesto.',
     rubros: [
       {
         nombre: 'Detailing de autos',
@@ -99,10 +76,10 @@ const EJEMPLOS = {
       },
     ],
   },
-  paquetes: {
-    titulo: 'Paquetes / combos',
+  plantillas: {
+    titulo: 'Plantillas',
     bajada:
-      'Combos de servicios que se precargan juntos al crear un presupuesto. Sirven para ofrecer lo más vendido en un toque.',
+      'Un presupuesto preconfigurado: definís qué secciones y servicios se cargan juntos al crearlo. Sirven para armar lo más usado en un toque.',
     rubros: [
       {
         nombre: 'Detailing de autos',

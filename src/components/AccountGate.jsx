@@ -299,11 +299,11 @@ export function AccountGate() {
           manoObra: { valor: 0, moneda: 'ARS' },
           opciones: [],
         }))
-      // El rubro elegido en el paso 2 solo precarga el catálogo (cats/servicios/
-      // productos); paquetes y tipos de trabajo van vacíos y se configuran luego
+      // El rubro elegido en el paso 2 solo precarga el catálogo (secciones/
+      // servicios/productos); las plantillas van vacías y se configuran luego
       // dentro de la app.
       const id = slugFor(nom)
-      await createAccount(id, buildEmptyData(nom, prods, items, cats, [], []))
+      await createAccount(id, buildEmptyData(nom, prods, items, cats, []))
       setUser(id)
     } catch {
       setError(true)

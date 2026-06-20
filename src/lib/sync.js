@@ -29,9 +29,9 @@ export async function deleteAccount(user) {
 }
 
 // Keys de presupuestos → auto-guardan. El resto (config, local, catálogos, ítems,
-// paquetes) son "ajustes" y se guardan con el botón manual.
+// plantillas) son "ajustes" y se guardan con el botón manual.
 const BUDGET_KEYS = ['presupuestos', 'nextNro']
-const SETTINGS_KEYS = ['config', 'local', 'tiposTrabajo', 'formasPago', 'categorias', 'productos', 'items', 'paquetes']
+const SETTINGS_KEYS = ['config', 'local', 'formasPago', 'categorias', 'productos', 'items', 'plantillas']
 
 // Mientras hidratamos desde la DB no queremos marcar dirty ni re-disparar guardado.
 let hydrating = false

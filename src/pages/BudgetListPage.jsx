@@ -97,7 +97,7 @@ export function BudgetListPage() {
               </div>
               <div className="text-base font-bold leading-snug">Configurá todo para empezar</div>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Cargá tus servicios, productos, paquetes y tipos de vehículo una sola vez. Después creás presupuestos en segundos.
+                Cargá tus secciones, servicios, productos y plantillas una sola vez. Después creás presupuestos en segundos.
               </p>
               <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
                 Ir a configuración
@@ -137,7 +137,7 @@ export function BudgetListPage() {
           </div>
           <p className="text-base font-medium">Todavía no hay presupuestos</p>
           <p className="max-w-xs text-sm text-muted-foreground">
-            Creá tu primer presupuesto desde el botón <span className="font-medium text-foreground">Crear nuevo presupuesto</span> de arriba. Ya viene precargado el paquete más usado para ir rápido.
+            Creá tu primer presupuesto desde el botón <span className="font-medium text-foreground">Crear nuevo presupuesto</span> de arriba. Ya viene precargada la plantilla más usada para ir rápido.
           </p>
         </div>
       ) : (

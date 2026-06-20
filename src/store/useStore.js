@@ -8,12 +8,11 @@ export const DATA_KEYS = [
   'seedVersion',
   'config',
   'local',
-  'tiposTrabajo',
   'formasPago',
   'categorias',
   'productos',
   'items',
-  'paquetes',
+  'plantillas',
   'presupuestos',
   'nextNro',
 ]
@@ -41,35 +40,11 @@ export const useStore = create(
         set((s) => ({ config: { ...s.config, cotizacionUsd: Number(v) || 0 } })),
       setIvaPct: (v) =>
         set((s) => ({ config: { ...s.config, ivaPct: Number(v) || 0 } })),
-      setPaqueteDestacado: (id) =>
-        set((s) => ({ config: { ...s.config, paqueteDestacadoId: id } })),
+      setPlantillaDestacada: (id) =>
+        set((s) => ({ config: { ...s.config, plantillaDestacadaId: id } })),
       setFormaPagoDefault: (id) =>
         set((s) => ({ config: { ...s.config, formaPagoDefaultId: id } })),
       setLocal: (patch) => set((s) => ({ local: { ...s.local, ...patch } })),
-
-      // ---------------- Tipos de trabajo (multiplican el total) ----------------
-      addTipoTrabajo: (nombre = 'Nuevo tipo', multiplicador = 1) => {
-        const id = uid('tt')
-        set((s) => ({
-          tiposTrabajo: [
-            ...s.tiposTrabajo,
-            { id, nombre, multiplicador: Number(multiplicador) || 1 },
-          ],
-        }))
-        return id
-      },
-      updateTipoTrabajo: (id, patch) =>
-        set((s) => ({
-          tiposTrabajo: s.tiposTrabajo.map((t) => (t.id === id ? { ...t, ...patch } : t)),
-        })),
-      removeTipoTrabajo: (id) =>
-        set((s) => ({ tiposTrabajo: s.tiposTrabajo.filter((t) => t.id !== id) })),
-      reorderTiposTrabajo: (orderedIds) =>
-        set((s) => ({
-          tiposTrabajo: orderedIds
-            .map((id) => s.tiposTrabajo.find((t) => t.id === id))
-            .filter(Boolean),
-        })),
 
       // ---------------- Formas de pago ----------------
       addFormaPago: (nombre) => {
@@ -166,30 +141,33 @@ export const useStore = create(
       removeItem: (id) =>
         set((s) => ({
           items: s.items.filter((it) => it.id !== id),
-          paquetes: s.paquetes.map((p) => ({
+          plantillas: s.plantillas.map((p) => ({
             ...p,
             itemIds: (p.itemIds || []).filter((iid) => iid !== id),
           })),
         })),
 
-      // ---------------- Paquetes ----------------
-      addPaquete: (data) => {
-        const id = uid('paq')
+      // ---------------- Plantillas ----------------
+      addPlantilla: (data) => {
+        const id = uid('plt')
         set((s) => ({
-          paquetes: [...s.paquetes, { id, nombre: '', itemIds: [], ...data }],
+          plantillas: [
+            ...s.plantillas,
+            { id, nombre: '', descripcion: '', itemIds: [], ...data },
+          ],
         }))
         return id
       },
-      updatePaquete: (id, patch) =>
+      updatePlantilla: (id, patch) =>
         set((s) => ({
-          paquetes: s.paquetes.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+          plantillas: s.plantillas.map((p) => (p.id === id ? { ...p, ...patch } : p)),
         })),
-      removePaquete: (id) =>
-        set((s) => ({ paquetes: s.paquetes.filter((p) => p.id !== id) })),
-      reorderPaquetes: (orderedIds) =>
+      removePlantilla: (id) =>
+        set((s) => ({ plantillas: s.plantillas.filter((p) => p.id !== id) })),
+      reorderPlantillas: (orderedIds) =>
         set((s) => ({
-          paquetes: orderedIds
-            .map((id) => s.paquetes.find((p) => p.id === id))
+          plantillas: orderedIds
+            .map((id) => s.plantillas.find((p) => p.id === id))
             .filter(Boolean),
         })),
 

@@ -1,4 +1,4 @@
-import { ChevronDown, GripVertical, Plus, Star, Trash2 } from 'lucide-react'
+import { Check, ChevronDown, GripVertical, Plus, Star, Trash2 } from 'lucide-react'
 import {
   DndContext,
   PointerSensor,
@@ -25,14 +25,14 @@ import {
 import { useStore } from '@/store/useStore'
 import { cn } from '@/lib/utils'
 
-function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
-  const updatePaquete = useStore((s) => s.updatePaquete)
-  const removePaquete = useStore((s) => s.removePaquete)
-  const paqueteDestacadoId = useStore((s) => s.config.paqueteDestacadoId)
-  const setPaqueteDestacado = useStore((s) => s.setPaqueteDestacado)
+function SortablePlantilla({ plt, categoriasOrdenadas, itemsOrdenados }) {
+  const updatePlantilla = useStore((s) => s.updatePlantilla)
+  const removePlantilla = useStore((s) => s.removePlantilla)
+  const plantillaDestacadaId = useStore((s) => s.config.plantillaDestacadaId)
+  const setPlantillaDestacada = useStore((s) => s.setPlantillaDestacada)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: paq.id })
+    useSortable({ id: plt.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -40,7 +40,7 @@ function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
     opacity: isDragging ? 0.5 : undefined,
   }
 
-  const isDefault = paqueteDestacadoId === paq.id
+  const isDefault = plantillaDestacadaId === plt.id
 
   return (
     <Collapsible ref={setNodeRef} style={style} className="rounded-lg border p-2">
@@ -49,22 +49,31 @@ function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
           <button
             type="button"
             className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-accent active:cursor-grabbing"
-            aria-label="Reordenar paquete"
+            aria-label="Reordenar plantilla"
             {...attributes}
             {...listeners}
           >
             <GripVertical className="size-4" />
           </button>
           <Input
-            value={paq.nombre}
-            onChange={(e) => updatePaquete(paq.id, { nombre: e.target.value })}
+            value={plt.nombre}
+            onChange={(e) => updatePlantilla(plt.id, { nombre: e.target.value })}
+            placeholder="Nombre de la plantilla"
             className="h-8 flex-1"
+          />
+        </div>
+        <div className="pl-11">
+          <Input
+            value={plt.descripcion || ''}
+            onChange={(e) => updatePlantilla(plt.id, { descripcion: e.target.value })}
+            placeholder="Descripción (opcional) — para acordarte de qué se trata"
+            className="h-8 text-xs"
           />
         </div>
         <div className="flex items-center gap-1 pl-11">
           <CollapsibleTrigger className="group flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent active:bg-accent">
             <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
-            {paq.itemIds?.length || 0} servicios
+            {plt.itemIds?.length || 0} servicios
           </CollapsibleTrigger>
           <div className="flex-1" />
           <Button
@@ -76,10 +85,10 @@ function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
                 ? 'text-primary hover:text-primary'
                 : 'text-muted-foreground/50 hover:text-foreground'
             )}
-            onClick={() => setPaqueteDestacado(isDefault ? null : paq.id)}
+            onClick={() => setPlantillaDestacada(isDefault ? null : plt.id)}
             aria-pressed={isDefault}
             aria-label={isDefault ? 'Quitar como default' : 'Marcar como default'}
-            title={isDefault ? 'Paquete default' : 'Marcar como default'}
+            title={isDefault ? 'Plantilla default' : 'Marcar como default'}
           >
             <Star className={cn('size-4', isDefault && 'fill-current')} />
           </Button>
@@ -87,8 +96,8 @@ function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
             variant="ghost"
             size="icon"
             className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => removePaquete(paq.id)}
-            aria-label="Eliminar paquete"
+            onClick={() => removePlantilla(plt.id)}
+            aria-label="Eliminar plantilla"
           >
             <Trash2 className="size-4" />
           </Button>
@@ -98,23 +107,52 @@ function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
         {categoriasOrdenadas.map((cat) => {
           const itemsCat = itemsOrdenados.filter((it) => it.categoriaId === cat.id)
           if (itemsCat.length === 0) return null
+          const seleccionados = (plt.itemIds || []).filter((id) =>
+            itemsCat.some((it) => it.id === id)
+          )
+          const todosActivos = seleccionados.length === itemsCat.length
+          const toggleSeccion = () => {
+            const otros = (plt.itemIds || []).filter(
+              (id) => !itemsCat.some((it) => it.id === id)
+            )
+            updatePlantilla(plt.id, {
+              itemIds: todosActivos ? otros : [...otros, ...itemsCat.map((it) => it.id)],
+            })
+          }
           return (
             <div key={cat.id}>
-              <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              <button
+                type="button"
+                onClick={toggleSeccion}
+                aria-pressed={todosActivos}
+                className="mb-1 flex items-center gap-1.5 rounded px-1 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground hover:bg-accent"
+              >
+                <span
+                  className={cn(
+                    'flex size-3.5 items-center justify-center rounded-sm border',
+                    todosActivos
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : seleccionados.length > 0
+                        ? 'border-primary bg-primary/30'
+                        : 'border-input'
+                  )}
+                >
+                  {todosActivos && <Check className="size-3" />}
+                </span>
                 {cat.nombre}
-              </div>
+              </button>
               <div className="flex flex-wrap gap-1.5">
                 {itemsCat.map((it) => {
-                  const active = (paq.itemIds || []).includes(it.id)
+                  const active = (plt.itemIds || []).includes(it.id)
                   return (
                     <button
                       key={it.id}
                       type="button"
                       onClick={() =>
-                        updatePaquete(paq.id, {
+                        updatePlantilla(plt.id, {
                           itemIds: active
-                            ? paq.itemIds.filter((x) => x !== it.id)
-                            : [...(paq.itemIds || []), it.id],
+                            ? plt.itemIds.filter((x) => x !== it.id)
+                            : [...(plt.itemIds || []), it.id],
                         })
                       }
                       className={cn(
@@ -137,12 +175,12 @@ function SortablePaquete({ paq, categoriasOrdenadas, itemsOrdenados }) {
   )
 }
 
-export function PaquetesSettings() {
+export function PlantillasSettings() {
   const items = useStore((s) => s.items)
   const categorias = useStore((s) => s.categorias)
-  const paquetes = useStore((s) => s.paquetes)
-  const addPaquete = useStore((s) => s.addPaquete)
-  const reorderPaquetes = useStore((s) => s.reorderPaquetes)
+  const plantillas = useStore((s) => s.plantillas)
+  const addPlantilla = useStore((s) => s.addPlantilla)
+  const reorderPlantillas = useStore((s) => s.reorderPlantillas)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -151,10 +189,10 @@ export function PaquetesSettings() {
 
   const handleDragEnd = ({ active, over }) => {
     if (!over || active.id === over.id) return
-    const ids = paquetes.map((p) => p.id)
+    const ids = plantillas.map((p) => p.id)
     const oldIndex = ids.indexOf(active.id)
     const newIndex = ids.indexOf(over.id)
-    reorderPaquetes(arrayMove(ids, oldIndex, newIndex))
+    reorderPlantillas(arrayMove(ids, oldIndex, newIndex))
   }
 
   const categoriasOrdenadas = [...categorias].sort((a, b) => a.orden - b.orden)
@@ -167,13 +205,13 @@ export function PaquetesSettings() {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Paquetes / combos</h3>
+        <h3 className="text-sm font-semibold">Plantillas</h3>
         <Button
           variant="outline"
           size="sm"
-          onClick={() => addPaquete({ nombre: 'Nuevo paquete' })}
+          onClick={() => addPlantilla({ nombre: 'Nueva plantilla' })}
         >
-          <Plus className="size-4" /> Agregar paquete
+          <Plus className="size-4" /> Agregar plantilla
         </Button>
       </div>
       <DndContext
@@ -182,14 +220,14 @@ export function PaquetesSettings() {
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={paquetes.map((p) => p.id)}
+          items={plantillas.map((p) => p.id)}
           strategy={verticalListSortingStrategy}
         >
           <div className="space-y-3">
-            {paquetes.map((paq) => (
-              <SortablePaquete
-                key={paq.id}
-                paq={paq}
+            {plantillas.map((plt) => (
+              <SortablePlantilla
+                key={plt.id}
+                plt={plt}
                 categoriasOrdenadas={categoriasOrdenadas}
                 itemsOrdenados={itemsOrdenados}
               />

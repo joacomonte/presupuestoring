@@ -1,7 +1,7 @@
 // Datos de ejemplo (seed) — PRD §10. Se cargan en localStorage al primer arranque.
 import { IVA_DEFAULT } from '@/lib/calc'
 
-export const SEED_VERSION = 2
+export const SEED_VERSION = 3
 export const STORAGE_KEY = 'presupuestoring'
 
 // Helpers de moneda / delta
@@ -10,45 +10,37 @@ const mUSD = (valor) => ({ valor, moneda: 'USD' })
 const dMonto = (money) => ({ modo: 'monto', monto: money })
 const dPct = (pct) => ({ modo: 'pct', pct })
 
-// Tipos de trabajo demo (multiplican el total del presupuesto). Opcional por rubro.
-const TIPOS_TRABAJO_DEMO = [
-  { id: 'auto-chico', nombre: 'Auto chico', multiplicador: 1.0 },
-  { id: 'suv', nombre: 'SUV', multiplicador: 1.5 },
-  { id: 'pickup', nombre: 'Pickup grande', multiplicador: 2.0 },
-]
-
 // Estado inicial de una cuenta nueva: vacío salvo lo que el usuario haya cargado
-// en el alta (productos, servicios, categorías, combos y tipos de trabajo).
+// en el alta (productos, servicios, secciones y plantillas).
 export function buildEmptyData(
   nombre,
   productos = [],
   items = [],
   categorias = [],
-  paquetes = [],
-  tiposTrabajo = []
+  plantillas = []
 ) {
   return {
     seedVersion: SEED_VERSION,
     config: {
       cotizacionUsd: 1200,
       ivaPct: IVA_DEFAULT,
-      paqueteDestacadoId: null,
+      plantillaDestacadaId: null,
       formaPagoDefaultId: null,
     },
     local: { nombre, telefono: '', direccion: '', email: '', logo: null },
-    tiposTrabajo,
     formasPago: [],
     categorias,
     productos,
     items,
-    paquetes,
+    plantillas,
     presupuestos: [],
     nextNro: 1,
   }
 }
 
-// Normaliza datos de versiones viejas (matriz de precios por tipo de auto) al
-// modelo nuevo (precio único por ítem + tipos de trabajo como multiplicador).
+// Normaliza datos de versiones viejas al modelo actual:
+//  - matriz de precios por tipo de auto → precio único por ítem
+//  - "paquetes" → "plantillas"; elimina "tipos de trabajo" (feature retirada).
 export function migrateData(data) {
   if (!data || typeof data !== 'object') return data
   const out = { ...data }
@@ -64,7 +56,18 @@ export function migrateData(data) {
     })
   }
 
-  if (!Array.isArray(out.tiposTrabajo)) out.tiposTrabajo = []
+  // paquetes → plantillas
+  if (out.plantillas == null && Array.isArray(out.paquetes)) out.plantillas = out.paquetes
+  delete out.paquetes
+  if (out.config && typeof out.config === 'object') {
+    if (out.config.plantillaDestacadaId == null && out.config.paqueteDestacadoId != null) {
+      out.config.plantillaDestacadaId = out.config.paqueteDestacadoId
+    }
+    delete out.config.paqueteDestacadoId
+  }
+
+  // Tipos de trabajo: feature retirada.
+  delete out.tiposTrabajo
   delete out.tiposAuto
 
   return out
@@ -74,7 +77,7 @@ export function buildSeed() {
   const config = {
     cotizacionUsd: 1200,
     ivaPct: IVA_DEFAULT,
-    paqueteDestacadoId: 'lavado-premium',
+    plantillaDestacadaId: 'lavado-premium',
     formaPagoDefaultId: null,
   }
 
@@ -310,7 +313,7 @@ export function buildSeed() {
     },
   ]
 
-  const paquetes = [
+  const plantillas = [
     {
       id: 'full-detail',
       nombre: 'Full Detail',
@@ -332,12 +335,11 @@ export function buildSeed() {
     seedVersion: SEED_VERSION,
     config,
     local,
-    tiposTrabajo: TIPOS_TRABAJO_DEMO.map((t) => ({ ...t })),
     formasPago,
     categorias,
     productos,
     items,
-    paquetes,
+    plantillas,
     presupuestos: [],
     nextNro: 1,
   }

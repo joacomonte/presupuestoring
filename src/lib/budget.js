@@ -64,12 +64,12 @@ export function blankItem(categoriaId, categoriaNombre = '') {
 
 // Crea un presupuesto borrador con defaults (sin N°: se asigna al guardar).
 export function createDraft(state) {
-  const { config, paquetes, items, productos, categorias, formasPago } = state
+  const { config, plantillas, items, productos, categorias, formasPago } = state
   const ctx = { productos, items, categorias }
 
-  // Preselecciona el paquete destacado (más vendido).
+  // Preselecciona la plantilla destacada (más usada).
   let draftItems = []
-  const destacado = paquetes.find((p) => p.id === config.paqueteDestacadoId)
+  const destacado = plantillas.find((p) => p.id === config.plantillaDestacadaId)
   if (destacado) {
     draftItems = (destacado.itemIds || [])
       .map((id) => items.find((it) => it.id === id))
@@ -95,7 +95,6 @@ export function createDraft(state) {
       estado: '',
       observaciones: '',
     },
-    tipoTrabajo: null,
     items: draftItems,
     tiempoEstimado: '',
     formaPago:

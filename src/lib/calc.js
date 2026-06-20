@@ -63,11 +63,8 @@ export function aplicarPorcentajeOMonto(base, regla) {
 export function computeTotals(presupuesto) {
   const cot = Number(presupuesto.cotizacionUsd) || 0
   const items = presupuesto.items || []
-  // Subtotal de ítems, luego multiplicador del "tipo de trabajo" (opcional).
   const subtotalItems = subtotalARS(items, cot)
-  const multiplicadorTrabajo = Number(presupuesto.tipoTrabajo?.multiplicador) || 1
-  const subtotal = subtotalItems * multiplicadorTrabajo
-  const recargoTrabajo = subtotal - subtotalItems
+  const subtotal = subtotalItems
   const descuento = Math.min(
     aplicarPorcentajeOMonto(subtotal, presupuesto.descuento),
     subtotal
@@ -83,8 +80,6 @@ export function computeTotals(presupuesto) {
 
   return {
     subtotalItems,
-    multiplicadorTrabajo,
-    recargoTrabajo,
     subtotal,
     descuento,
     baseImponible,
