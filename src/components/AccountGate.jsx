@@ -14,11 +14,17 @@ import {
   FolderTree,
   Layers,
   Gauge,
+  ChevronDown,
 } from 'lucide-react'
 import { AppLogo } from '@/components/AppLogo'
 import { MoneyInput } from '@/components/MoneyInput'
 import { MultiplicadorInput } from '@/components/MultiplicadorInput'
 import { EjemplosDialog } from '@/components/EjemplosDialog'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -356,23 +362,31 @@ export function AccountGate() {
         )}
 
         {accounts && accounts.length > 0 && (
-          <ul className="space-y-2">
-            {accounts.map((a) => (
-              <AccountRow
-                key={a.user_id}
-                account={a}
-                deleting={deletingId === a.user_id}
-                onSelect={() => setUser(a.user_id)}
-                onDelete={() => setConfirmAccount(a)}
-              />
-            ))}
-          </ul>
-        )}
-
-        {accounts && accounts.length > 0 && (
-          <p className="text-center text-xs text-muted-foreground/70">
-            Tocá para entrar · mantené presionado para eliminar
-          </p>
+          <Collapsible className="space-y-2">
+            <CollapsibleTrigger
+              id="btn-ver-negocios"
+              className="group flex w-full items-center justify-center gap-1.5 py-1 text-xs font-medium text-muted-foreground/70 transition-colors hover:text-muted-foreground"
+            >
+              Ya tengo un negocio
+              <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-2">
+              <ul className="space-y-2">
+                {accounts.map((a) => (
+                  <AccountRow
+                    key={a.user_id}
+                    account={a}
+                    deleting={deletingId === a.user_id}
+                    onSelect={() => setUser(a.user_id)}
+                    onDelete={() => setConfirmAccount(a)}
+                  />
+                ))}
+              </ul>
+              <p className="text-center text-xs text-muted-foreground/70">
+                Tocá para entrar · mantené presionado para eliminar
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
         )}
 
         {accounts && accounts.length === 0 && (
