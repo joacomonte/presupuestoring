@@ -734,8 +734,10 @@ export function AccountGate({ children }) {
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">Combos</h2>
                   <p className="text-sm text-muted-foreground">
-                    Agrupá servicios que solés vender juntos para precargarlos de un toque al armar
-                    un presupuesto. Es opcional: si no creás ninguno, no pasa nada.
+                    Pensalos como plantillas rápidas: agrupá servicios que solés vender juntos y
+                    cargalos de un toque al armar un presupuesto, en vez de sumarlos uno por uno. Es
+                    totalmente opcional —sirve para ahorrarte tiempo después—; si no creás ninguno,
+                    no pasa nada.
                   </p>
                   <EjemplosDialog topic="paquetes" onUsar={usar('paquetes')} />
                 </div>
