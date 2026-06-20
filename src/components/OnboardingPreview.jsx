@@ -1,41 +1,49 @@
 import { cn } from '@/lib/utils'
 
 // Preview ILUSTRATIVO de un presupuesto, usado en los pasos "preview" del onboarding
-// para mostrar qué se va a armar antes de cada paso de edición. NO refleja los datos
-// que el usuario carga: es siempre el mismo ejemplo fijo (detailing) y solo resalta
-// la capa del paso actual, atenuando las que todavía no se "crearon".
+// para mostrar qué se va a armar antes de cada paso de edición. Recibe `data` (el
+// preview del rubro elegido en el paso 2) y solo resalta la capa del paso actual,
+// atenuando las que todavía no se "crearon". Los montos son ilustrativos.
 //
 // Capas y orden narrativo: secciones (1) → servicios (2) → productos (3).
 // - La capa resaltada se acentúa en color primario.
 // - Las capas "por encima" (ya creadas en la narrativa) se ven normales.
 // - Las capas "por debajo" (todavía no creadas) se atenúan.
-const EJEMPLO = [
+// - El primer elemento de la capa resaltada recibe `targetId` para que la flecha
+//   conectora del paso (OnboardingArrow, en AccountGate) sepa adónde apuntar.
+//
+// Modo `blur` (cuando se eligió "empezar de cero"): secciones genéricas (Sección 1,
+// 2, 3) y los datos de servicios/productos se muestran borroneados, como placeholder
+// de "acá van tus datos".
+const PLACEHOLDER = [
   {
-    seccion: 'Lavado exterior',
+    seccion: 'Sección 1',
     servicios: [
-      { titulo: 'Lavado simple', precio: '$18.000', productos: ['Shampoo pH', 'Microfibras'] },
-      { titulo: 'Lavado + encerado', precio: '$28.000', productos: ['Cera líquida', 'Shampoo pH'] },
+      { titulo: 'Servicio uno', precio: '$00.000', productos: ['Producto', 'Producto'] },
+      { titulo: 'Servicio dos', precio: '$00.000', productos: ['Producto'] },
     ],
   },
   {
-    seccion: 'Interior',
-    servicios: [
-      { titulo: 'Interior básico', precio: '$22.000', productos: ['APC', 'Renovador'] },
-      { titulo: 'Tratamiento de cuero', precio: '$35.000', productos: ['Acondicionador'] },
-    ],
+    seccion: 'Sección 2',
+    servicios: [{ titulo: 'Servicio tres', precio: '$00.000', productos: ['Producto', 'Producto'] }],
   },
   {
-    seccion: 'Tratamientos',
-    servicios: [{ titulo: 'Cerámico 9H', precio: '$120.000', productos: ['Recubrimiento 9H'] }],
+    seccion: 'Sección 3',
+    servicios: [{ titulo: 'Servicio cuatro', precio: '$00.000', productos: ['Producto'] }],
   },
 ]
 
 const ORDER = { secciones: 1, servicios: 2, productos: 3 }
 
-export function OnboardingPreview({ nombre, highlight }) {
+export function OnboardingPreview({ nombre, highlight, data, total = '$223.000', blur = false, targetId }) {
+  const grupos = blur ? PLACEHOLDER : data ?? PLACEHOLDER
   const active = ORDER[highlight] ?? 0
   // Atenúa una capa solo si está "por debajo" de la resaltada (todavía no creada).
   const dim = (layer) => (ORDER[layer] > active ? 'opacity-30' : '')
+  // En modo "de cero" los datos (servicios y productos) van borroneados.
+  const blurData = blur ? 'blur-[3px] select-none' : ''
+  // id del primer elemento de la capa resaltada: destino de la flecha conectora.
+  const targetIf = (on) => (on && targetId ? targetId : undefined)
 
   return (
     <div
@@ -60,58 +68,67 @@ export function OnboardingPreview({ nombre, highlight }) {
       </div>
 
       <div className="space-y-3 px-4 py-3">
-        {EJEMPLO.map((g) => (
+        {grupos.map((g, gi) => (
           <div key={g.seccion}>
             {/* Capa secciones */}
-            <div
-              className={cn(
-                'mb-1 inline-block border-b border-zinc-100 pb-0.5 text-[11px] font-semibold uppercase tracking-wide transition-colors',
-                highlight === 'secciones'
-                  ? 'rounded bg-primary/10 px-1.5 text-primary'
-                  : 'text-zinc-400',
-                dim('secciones')
-              )}
-            >
-              {g.seccion}
+            <div className="mb-1 flex items-center">
+              <span
+                id={targetIf(highlight === 'secciones' && gi === 0)}
+                className={cn(
+                  'inline-block border-b border-zinc-100 pb-0.5 text-[11px] font-semibold uppercase tracking-wide transition-colors',
+                  highlight === 'secciones'
+                    ? 'rounded bg-primary/10 px-1.5 text-primary'
+                    : 'text-zinc-400',
+                  dim('secciones')
+                )}
+              >
+                {g.seccion}
+              </span>
             </div>
 
-            {g.servicios.map((s) => (
+            {g.servicios.map((s, si) => (
               <div key={s.titulo} className="py-1">
                 {/* Capa servicios */}
                 <div className={cn('flex items-center justify-between gap-2 transition-colors', dim('servicios'))}>
-                  <span
-                    className={cn(
-                      'text-xs font-medium',
-                      highlight === 'servicios' && 'text-primary'
-                    )}
-                  >
-                    {s.titulo}
+                  <span className="flex min-w-0 items-center">
+                    <span
+                      id={targetIf(highlight === 'servicios' && gi === 0 && si === 0)}
+                      className={cn(
+                        'truncate text-xs font-medium',
+                        highlight === 'servicios' && 'text-primary',
+                        blurData
+                      )}
+                    >
+                      {s.titulo}
+                    </span>
                   </span>
                   <span
                     className={cn(
                       'shrink-0 text-xs font-medium tabular-nums',
-                      highlight === 'servicios' ? 'text-primary' : 'text-zinc-500'
+                      highlight === 'servicios' ? 'text-primary' : 'text-zinc-500',
+                      blurData
                     )}
                   >
                     {s.precio}
                   </span>
                 </div>
 
-                {/* Capa productos (chips) */}
-                <div className={cn('mt-1 flex flex-wrap gap-1 transition-opacity', dim('productos'))}>
-                  {s.productos.map((p) => (
-                    <span
-                      key={p}
-                      className={cn(
-                        'rounded-full border px-1.5 py-0.5 text-[10px] transition-colors',
-                        highlight === 'productos'
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-zinc-200 bg-zinc-50 text-zinc-500'
-                      )}
-                    >
-                      {p}
-                    </span>
-                  ))}
+                {/* Capa productos: insumos usados, en texto gris (no badges) */}
+                <div
+                  className={cn(
+                    'mt-0.5 flex flex-wrap items-center gap-x-1 text-[10px] leading-snug transition-colors',
+                    dim('productos')
+                  )}
+                >
+                  <span className={cn('font-medium', highlight === 'productos' ? 'text-primary' : 'text-zinc-400')}>
+                    Se utilizó:
+                  </span>
+                  <span
+                    id={targetIf(highlight === 'productos' && gi === 0 && si === 0)}
+                    className={cn(highlight === 'productos' ? 'text-primary' : 'text-zinc-500', blurData)}
+                  >
+                    {s.productos.join(', ')}
+                  </span>
                 </div>
               </div>
             ))}
@@ -122,7 +139,7 @@ export function OnboardingPreview({ nombre, highlight }) {
         <div className="ml-auto w-32 border-t border-zinc-200 pt-1.5">
           <div className="flex items-center justify-between text-sm font-bold">
             <span>Total</span>
-            <span className="tabular-nums">$223.000</span>
+            <span className={cn('tabular-nums', blurData)}>{total}</span>
           </div>
         </div>
       </div>

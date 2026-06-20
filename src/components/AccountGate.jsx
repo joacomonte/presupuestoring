@@ -14,11 +14,17 @@ import {
   FolderTree,
   Sparkles,
   ChevronDown,
+  Car,
+  Dog,
+  SprayCan,
+  Trees,
+  Camera,
 } from 'lucide-react'
 import { AppLogo } from '@/components/AppLogo'
 import { MoneyInput } from '@/components/MoneyInput'
 import { OnboardingPreview } from '@/components/OnboardingPreview'
-import { EjemplosDialog } from '@/components/EjemplosDialog'
+import { OnboardingArrow } from '@/components/OnboardingArrow'
+import { RUBROS } from '@/data/rubrosDemo'
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,9 +51,19 @@ import { cn } from '@/lib/utils'
 
 // Onboarding "preview-guiado": alterna pasos visuales (muestran un presupuesto de
 // ejemplo resaltando la capa que se va a crear) con pasos de edición (listas planas).
-//  1 nombre · 2 preview-secciones · 3 crear-secciones · 4 preview-servicios
-//  5 crear-servicios · 6 preview-productos · 7 crear-productos · 8 plantillas (maqueta)
+//  1 nombre · 2 rubro (precarga demo o "de cero") · 3 preview-secciones
+//  4 crear-secciones · 5 preview-servicios · 6 crear-servicios
+//  7 preview-productos · 8 crear-productos
 const STEPS = 8
+
+// Icono por rubro para las cards del paso 2 (el catálogo vive en data/rubrosDemo).
+const RUBRO_ICONS = {
+  detailing: Car,
+  'peluqueria-canina': Dog,
+  limpieza: SprayCan,
+  jardineria: Trees,
+  fotografia: Camera,
+}
 
 // Slug válido para user_id (/^[a-z0-9_-]{1,64}$/). Agrega sufijo corto para evitar colisiones.
 function slugFor(nombre) {
@@ -173,6 +189,7 @@ export function AccountGate() {
   const [productos, setProductos] = useState([])
   const [servicios, setServicios] = useState([])
   const [categorias, setCategorias] = useState([])
+  const [rubro, setRubro] = useState(null) // 'cero' | id de rubro | null (sin elegir)
   const [busy, setBusy] = useState(false)
   const [kbInset, setKbInset] = useState(0)
   const nombreRef = useRef(null)
@@ -222,6 +239,7 @@ export function AccountGate() {
     setProductos([])
     setServicios([])
     setCategorias([])
+    setRubro(null)
     setStep(1)
     setCreating(true)
   }
@@ -229,26 +247,32 @@ export function AccountGate() {
   const back = () => (step > 1 ? setStep((s) => s - 1) : setCreating(false))
   const next = () => setStep((s) => Math.min(STEPS, s + 1))
 
-  // Carga los ejemplos de un rubro como demo, reemplazando lo cargado en ese paso.
-  const usarEjemplos = (topic, items) => {
-    if (topic === 'productos') {
-      setProductos(items.map((n) => ({ ...newProducto(), nombre: n })))
-    } else if (topic === 'servicios') {
-      setServicios(items.map((t) => ({ ...newServicio(), titulo: t })))
-    } else if (topic === 'categorias') {
-      setCategorias(items.map((n) => ({ ...newCategoria(), nombre: n })))
-    }
+  // Paso 2: el rubro elegido precarga las tres listas (editables luego). "Empezar de
+  // cero" deja todo vacío. En ambos casos se marca `rubro` para habilitar Siguiente.
+  const elegirRubro = (r) => {
+    setRubro(r.id)
+    setCategorias(r.categorias.map((n) => ({ ...newCategoria(), nombre: n })))
+    setServicios(r.servicios.map((t) => ({ ...newServicio(), titulo: t })))
+    setProductos(r.productos.map((n) => ({ ...newProducto(), nombre: n })))
   }
-  const usar = (topic) => (items) => usarEjemplos(topic, items)
+  const empezarDeCero = () => {
+    setRubro('cero')
+    setCategorias([])
+    setServicios([])
+    setProductos([])
+  }
 
   const hasCategoria = categorias.some((c) => c.nombre.trim())
   const hasServicio = servicios.some((s) => s.titulo.trim())
-  // Solo los pasos de edición de secciones (3) y servicios (5) son obligatorios;
-  // los previews (2/4/6), productos (7) y plantillas (8) se pueden saltar.
+  // Preview del rubro elegido (undefined si "de cero" → el preview va borroneado).
+  const rubroData = RUBROS.find((r) => r.id === rubro)
+  // Obligatorios: elegir rubro/cero (2) y editar secciones (4) y servicios (6).
+  // Los previews (3/5/7) y productos (8) se pueden saltar.
   const nextDisabled =
     (step === 1 && !nombre.trim()) ||
-    (step === 3 && !hasCategoria) ||
-    (step === 5 && !hasServicio)
+    (step === 2 && !rubro) ||
+    (step === 4 && !hasCategoria) ||
+    (step === 6 && !hasServicio)
 
   const crear = async () => {
     const nom = nombre.trim()
@@ -275,10 +299,9 @@ export function AccountGate() {
           manoObra: { valor: 0, moneda: 'ARS' },
           opciones: [],
         }))
-      // En el onboarding nuevo no se capturan plantillas (paquetes) ni tipos de
-      // trabajo: van vacíos y se configuran luego dentro de la app.
-      // TODO(plantillas): cuando el paso 8 deje de ser maqueta, sembrar acá los
-      // paquetes elegidos (y, si la plantilla los trae, también cats/items/prods).
+      // El rubro elegido en el paso 2 solo precarga el catálogo (cats/servicios/
+      // productos); paquetes y tipos de trabajo van vacíos y se configuran luego
+      // dentro de la app.
       const id = slugFor(nom)
       await createAccount(id, buildEmptyData(nom, prods, items, cats, [], []))
       setUser(id)
@@ -328,19 +351,15 @@ export function AccountGate() {
           ))}
         </ul>
 
-        {accounts === null && !error && (
-          <div className="flex justify-center py-4">
-            <Loader2 className="size-5 animate-spin text-muted-foreground" />
-          </div>
-        )}
-
         {error && (
           <p className="text-center text-sm text-destructive">
             Hubo un problema con las cuentas. Reintentá más tarde.
           </p>
         )}
 
-        {accounts && accounts.length > 0 && (
+        {/* Mientras carga (accounts === null) ya mostramos el toggle: la lista carga
+            en background y el spinner solo aparece al expandir. */}
+        {!error && (accounts === null || accounts.length > 0) && (
           <Collapsible className="space-y-2">
             <CollapsibleTrigger
               id="btn-ver-negocios"
@@ -350,20 +369,28 @@ export function AccountGate() {
               <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2">
-              <ul className="space-y-2">
-                {accounts.map((a) => (
-                  <AccountRow
-                    key={a.user_id}
-                    account={a}
-                    deleting={deletingId === a.user_id}
-                    onSelect={() => setUser(a.user_id)}
-                    onDelete={() => setConfirmAccount(a)}
-                  />
-                ))}
-              </ul>
-              <p className="text-center text-xs text-muted-foreground/70">
-                Tocá para entrar · mantené presionado para eliminar
-              </p>
+              {accounts === null ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <ul className="space-y-2">
+                    {accounts.map((a) => (
+                      <AccountRow
+                        key={a.user_id}
+                        account={a}
+                        deleting={deletingId === a.user_id}
+                        onSelect={() => setUser(a.user_id)}
+                        onDelete={() => setConfirmAccount(a)}
+                      />
+                    ))}
+                  </ul>
+                  <p className="text-center text-xs text-muted-foreground/70">
+                    Tocá para entrar · mantené presionado para eliminar
+                  </p>
+                </>
+              )}
             </CollapsibleContent>
           </Collapsible>
         )}
@@ -424,61 +451,157 @@ export function AccountGate() {
               style={{ transform: `translateX(-${(step - 1) * 100}%)` }}
             >
               {/* Paso 1: nombre */}
-              <section className="flex h-full w-full shrink-0 flex-col justify-center gap-6 overflow-y-auto px-5 py-4">
-                <div className="space-y-3">
-                  <AppLogo className="size-14" />
-                  <div className="space-y-1.5">
-                    <h2 className="text-2xl font-semibold tracking-tight">¿Cómo se llama tu negocio?</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Es el nombre que va a figurar en tus presupuestos. En los próximos pasos
-                      armamos juntos las secciones, los servicios y los productos — todo lo podés
-                      cambiar después.
-                    </p>
+              <section className="flex h-full w-full shrink-0 flex-col justify-center gap-10 overflow-y-auto px-6 py-8">
+                <div className="flex flex-col items-center gap-5 text-center">
+                  <span className="flex size-24 items-center justify-center rounded-3xl bg-primary/10 ring-1 ring-primary/15">
+                    <AppLogo className="size-16" />
+                  </span>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium uppercase tracking-wide text-primary">Empecemos</p>
+                    <h2 className="text-3xl font-semibold leading-tight tracking-tight">
+                      ¿Cómo se llama tu negocio?
+                    </h2>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="nombre-cuenta">Nombre del negocio</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="nombre-cuenta" className="sr-only">
+                    Nombre del negocio
+                  </Label>
                   <Input
                     id="nombre-cuenta"
                     ref={nombreRef}
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
                     placeholder="Servicios Montech"
-                    className="h-12 text-base"
+                    className="h-14 rounded-xl text-center text-lg font-medium shadow-sm"
                   />
+                  <Button
+                    type="button"
+                    id="btn-siguiente-cuenta-paso1"
+                    disabled={nextDisabled}
+                    className="h-12 w-full gap-2 text-base"
+                    onClick={next}
+                  >
+                    Siguiente
+                    <ArrowRight className="size-5" />
+                  </Button>
                 </div>
               </section>
 
-              {/* Paso 2: preview — secciones */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
+              {/* Paso 2: elegir rubro (precarga demo) o empezar de cero */}
+              <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
                 <div className="space-y-2">
                   <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <FolderTree className="size-6" />
+                    <Sparkles className="size-6" />
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Así se ve un presupuesto</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Este es el diseño que va a recibir tu cliente. Se arma en capas y vamos a
-                    empezar por las <strong className="font-semibold text-foreground">secciones</strong>:
-                    los bloques en los que se ordena (Lavado, Interior, Tratamientos…). En el
-                    próximo paso las creás.
+                  <h2 className="text-2xl font-semibold tracking-tight">¿Arrancamos con un ejemplo?</h2>
+                  <p className="text-base text-foreground">
+                    Elegí un rubro parecido al tuyo y te precargamos todo de ejemplo. Después lo
+                    editás.
                   </p>
                 </div>
-                <OnboardingPreview nombre={nombre} highlight="secciones" />
+
+                {/* Empezar de cero: botón grande arriba de la lista */}
+                <button
+                  type="button"
+                  id="btn-rubro-cero"
+                  onClick={empezarDeCero}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors',
+                    rubro === 'cero'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-dashed hover:bg-muted/50'
+                  )}
+                >
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <Plus className="size-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold">Crear todo de cero</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Armá tus secciones, servicios y productos a mano.
+                    </span>
+                  </span>
+                  {rubro === 'cero' && <Check className="size-5 shrink-0 text-primary" />}
+                </button>
+
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  o usá un ejemplo
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+
+                <div className="grid gap-2">
+                  {RUBROS.map((r) => {
+                    const Icon = RUBRO_ICONS[r.id]
+                    const selected = rubro === r.id
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        id={`btn-rubro-${r.id}`}
+                        onClick={() => elegirRubro(r)}
+                        className={cn(
+                          'flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors',
+                          selected
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'hover:bg-muted/50'
+                        )}
+                      >
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                          {Icon && <Icon className="size-5" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{r.nombre}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            {r.categorias.length} secciones · {r.servicios.length} servicios ·{' '}
+                            {r.productos.length} productos
+                          </span>
+                        </span>
+                        {selected && <Check className="size-5 shrink-0 text-primary" />}
+                      </button>
+                    )
+                  })}
+                </div>
               </section>
 
-              {/* Paso 3: crear secciones (lista plana) */}
+              {/* Paso 3: preview — secciones */}
+              <section className="flex h-full w-full shrink-0 flex-col overflow-y-auto px-5 py-6">
+                <div className="relative flex flex-col gap-5">
+                  <div className="space-y-2">
+                    <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <FolderTree className="size-6" />
+                    </div>
+                    <h2 className="text-2xl font-semibold tracking-tight">Así se ve un presupuesto</h2>
+                    <p className="text-base text-foreground">
+                      Esto es lo que recibe tu cliente. Se divide en{' '}
+                      <strong id="kw-secciones" className="font-semibold">secciones</strong>, los
+                      bloques marcados acá. En el próximo paso las creás.
+                    </p>
+                  </div>
+                  <OnboardingPreview
+                    nombre={nombre}
+                    highlight="secciones"
+                    data={rubroData?.preview}
+                    total={rubroData?.total}
+                    blur={rubro === 'cero'}
+                    targetId="tgt-secciones"
+                  />
+                  <OnboardingArrow fromId="kw-secciones" toId="tgt-secciones" deps={`${rubro}-${step}`} />
+                </div>
+              </section>
+
+              {/* Paso 4: crear secciones (lista plana) */}
               <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
                 <div className="space-y-2">
                   <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <FolderTree className="size-6" />
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">Creá tus secciones</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Son los bloques en los que se divide el presupuesto. Un detallador usa "Lavado"
-                    o "Interior", un gasista "Materiales" o "Mano de obra", una diseñadora "Diseño" o
-                    "Impresión". Creá al menos una (o cargá un ejemplo desde la lista).
+                  <p className="text-base text-foreground">
+                    Los bloques en que se divide el presupuesto: "Lavado", "Materiales", "Diseño".
+                    Creá al menos una.
                   </p>
-                  <EjemplosDialog topic="categorias" label="Ver ejemplos" onUsar={usar('categorias')} />
                 </div>
 
                 <div className="space-y-2">
@@ -521,36 +644,43 @@ export function AccountGate() {
                 </Button>
               </section>
 
-              {/* Paso 4: preview — servicios */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
-                <div className="space-y-2">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Wrench className="size-6" />
+              {/* Paso 5: preview — servicios */}
+              <section className="flex h-full w-full shrink-0 flex-col overflow-y-auto px-5 py-6">
+                <div className="relative flex flex-col gap-5">
+                  <div className="space-y-2">
+                    <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Wrench className="size-6" />
+                    </div>
+                    <h2 className="text-2xl font-semibold tracking-tight">Ahora, los servicios</h2>
+                    <p className="text-base text-foreground">
+                      Dentro de cada sección van los{' '}
+                      <strong id="kw-servicios" className="font-semibold">servicios</strong>: lo que
+                      ofrecés y cobrás. En el próximo paso los creás.
+                    </p>
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Ahora, los servicios</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Dentro de cada sección van los{' '}
-                    <strong className="font-semibold text-foreground">servicios</strong>: lo que
-                    ofrecés y cobrás (Lavado simple, Corte de pelo, Cambio de aceite). Es lo que el
-                    cliente ve con su precio. En el próximo paso los creás.
-                  </p>
+                  <OnboardingPreview
+                    nombre={nombre}
+                    highlight="servicios"
+                    data={rubroData?.preview}
+                    total={rubroData?.total}
+                    blur={rubro === 'cero'}
+                    targetId="tgt-servicios"
+                  />
+                  <OnboardingArrow fromId="kw-servicios" toId="tgt-servicios" deps={`${rubro}-${step}`} />
                 </div>
-                <OnboardingPreview nombre={nombre} highlight="servicios" />
               </section>
 
-              {/* Paso 5: crear servicios (lista plana) */}
+              {/* Paso 6: crear servicios (lista plana) */}
               <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
                 <div className="space-y-2">
                   <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Wrench className="size-6" />
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">Creá tus servicios</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Es lo que ofrecés y cobrás: "Lavado simple", "Corte de pelo", "Sesión de fotos",
-                    "Cambio de aceite". Creá al menos uno (o cargá un ejemplo). Después, dentro de la
-                    app, los asignás a cada sección y les ponés precio.
+                  <p className="text-base text-foreground">
+                    Lo que ofrecés y cobrás: "Lavado simple", "Corte de pelo", "Cambio de aceite".
+                    Creá al menos uno.
                   </p>
-                  <EjemplosDialog topic="servicios" onUsar={usar('servicios')} />
                 </div>
 
                 <div className="space-y-2">
@@ -593,36 +723,43 @@ export function AccountGate() {
                 </Button>
               </section>
 
-              {/* Paso 6: preview — productos */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
-                <div className="space-y-2">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Package className="size-6" />
+              {/* Paso 7: preview — productos */}
+              <section className="flex h-full w-full shrink-0 flex-col overflow-y-auto px-5 py-6">
+                <div className="relative flex flex-col gap-5">
+                  <div className="space-y-2">
+                    <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Package className="size-6" />
+                    </div>
+                    <h2 className="text-2xl font-semibold tracking-tight">Por último, los productos</h2>
+                    <p className="text-base text-foreground">
+                      Cada servicio puede usar{' '}
+                      <strong id="kw-productos" className="font-semibold">productos</strong>: los
+                      insumos con su costo, para saber tu rentabilidad. En el próximo paso los creás.
+                    </p>
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Por último, los productos</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Cada servicio puede usar{' '}
-                    <strong className="font-semibold text-foreground">productos</strong>: los
-                    insumos o materiales con su costo (shampoo, tinta, repuestos). Sirven para saber
-                    tu rentabilidad. En el próximo paso los creás.
-                  </p>
+                  <OnboardingPreview
+                    nombre={nombre}
+                    highlight="productos"
+                    data={rubroData?.preview}
+                    total={rubroData?.total}
+                    blur={rubro === 'cero'}
+                    targetId="tgt-productos"
+                  />
+                  <OnboardingArrow fromId="kw-productos" toId="tgt-productos" deps={`${rubro}-${step}`} />
                 </div>
-                <OnboardingPreview nombre={nombre} highlight="productos" />
               </section>
 
-              {/* Paso 7: crear productos (lista plana, con costo) */}
+              {/* Paso 8: crear productos (lista plana, con costo) */}
               <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
                 <div className="space-y-2">
                   <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Package className="size-6" />
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">Creá tus productos</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Son los insumos o materiales que usás y su costo: shampoo, tinta, harina,
-                    repuestos, telas. Es opcional: si no cargás ninguno, lo podés hacer después. Más
-                    adelante, dentro de la app, los asignás a cada servicio.
+                  <p className="text-base text-foreground">
+                    Los insumos o materiales que usás y su costo: shampoo, tinta, repuestos. Es
+                    opcional.
                   </p>
-                  <EjemplosDialog topic="productos" onUsar={usar('productos')} />
                 </div>
 
                 <div className="space-y-3">
@@ -675,73 +812,6 @@ export function AccountGate() {
                   Agregar producto
                 </Button>
               </section>
-
-              {/* Paso 8: plantillas — MAQUETA (sin lógica todavía)
-
-                  La idea final: packs de arranque por rubro que, con un toque, llenan
-                  de una todo el presupuesto (secciones + servicios + productos). Hoy
-                  esto es solo visual: las tarjetas no hacen nada (botón deshabilitado).
-
-                  TODO(implementar plantillas):
-                  1. Definir un catálogo de plantillas por rubro (cats/servicios/productos),
-                     idealmente reusando los rubros de EjemplosDialog (EJEMPLOS).
-                  2. Al tocar "Usar plantilla": setCategorias/setServicios/setProductos con
-                     el contenido del pack (mergeando o reemplazando lo cargado) y saltar a
-                     crear, o marcar el pack elegido y sembrarlo en crear() (ver TODO ahí).
-                  3. Decidir si la plantilla solo siembra el catálogo de la cuenta o además
-                     deja un "combo"/paquete reusable (paquetes en buildEmptyData). */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
-                <div className="space-y-2">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Sparkles className="size-6" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-semibold tracking-tight">Plantillas</h2>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                      Próximamente
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Con un toque vas a poder armar todo un presupuesto listo para un rubro —
-                    secciones, servicios y productos incluidos. Pronto disponible; por ahora seguí
-                    y creá tu negocio.
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  {[
-                    {
-                      nombre: 'Lavado rápido — auto chico',
-                      incluye: 'Secciones Lavado exterior e Interior, servicios Lavado simple y Aspirado, con sus productos.',
-                    },
-                    {
-                      nombre: 'Detailing completo',
-                      incluye: 'Lavado, descontaminación, pulido y cerámico, con todos los insumos cargados.',
-                    },
-                    {
-                      nombre: 'Spa canino',
-                      incluye: 'Baño, corte y extras, con shampoo y acondicionador como productos.',
-                    },
-                  ].map((p) => (
-                    <div key={p.nombre} className="rounded-lg border bg-muted/30 p-3 opacity-70">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="size-4 shrink-0 text-primary" />
-                        <span className="text-sm font-semibold">{p.nombre}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">{p.incluye}</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled
-                        className="mt-3 w-full"
-                      >
-                        Usar plantilla
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </section>
             </div>
           </div>
 
@@ -749,7 +819,7 @@ export function AccountGate() {
             className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3"
             style={kbInset ? { paddingBottom: kbInset } : undefined}
           >
-            {step < STEPS ? (
+            {step === 1 ? null : step < STEPS ? (
               <Button
                 type="button"
                 id="btn-siguiente-cuenta"
