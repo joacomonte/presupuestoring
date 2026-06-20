@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Trash2,
-  Sparkles,
   Check,
   Package,
   Wrench,
@@ -156,6 +155,7 @@ export function AccountGate({ children }) {
   const [combos, setCombos] = useState([])
   const [tiposTrabajo, setTiposTrabajo] = useState([])
   const [busy, setBusy] = useState(false)
+  const [vpHeight, setVpHeight] = useState(null)
   const nombreRef = useRef(null)
 
   const load = () => {
@@ -169,6 +169,22 @@ export function AccountGate({ children }) {
   useEffect(() => {
     if (!user) load()
   }, [user])
+
+  // En mobile el teclado se superpone sobre el footer (en iOS el viewport de layout
+  // no se achica). Seguimos visualViewport para que el wizard mida exactamente el
+  // alto visible y el botón de continuar quede siempre por encima del teclado.
+  useEffect(() => {
+    if (!creating) return
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => setVpHeight(vv.height)
+    onResize()
+    vv.addEventListener('resize', onResize)
+    return () => {
+      vv.removeEventListener('resize', onResize)
+      setVpHeight(null)
+    }
+  }, [creating])
 
   useEffect(() => {
     if (creating && step === 1) {
@@ -193,6 +209,27 @@ export function AccountGate({ children }) {
 
   const back = () => (step > 1 ? setStep((s) => s - 1) : setCreating(false))
   const next = () => setStep((s) => Math.min(STEPS, s + 1))
+
+  // Carga los ejemplos de un rubro como demo, reemplazando lo cargado en ese paso.
+  const usarEjemplos = (topic, items) => {
+    if (topic === 'productos') {
+      setProductos(items.map((n) => ({ ...newProducto(), nombre: n })))
+    } else if (topic === 'servicios') {
+      setServicios(items.map((t) => ({ ...newServicio(), titulo: t })))
+    } else if (topic === 'categorias') {
+      setCategorias(items.map((n) => ({ ...newCategoria(), nombre: n })))
+    } else if (topic === 'paquetes') {
+      setCombos(items.map((n) => ({ ...newCombo(), nombre: n })))
+    } else if (topic === 'tipos-trabajo') {
+      setTiposTrabajo(
+        items.map((s) => {
+          const [nom, mult] = s.split('×')
+          return { ...newTipoTrabajo(), nombre: nom.trim(), multiplicador: Number(mult) || 1 }
+        })
+      )
+    }
+  }
+  const usar = (topic) => (items) => usarEjemplos(topic, items)
 
   const hasProducto = productos.some((p) => p.nombre.trim())
   const hasServicio = servicios.some((s) => s.titulo.trim())
@@ -324,7 +361,10 @@ export function AccountGate({ children }) {
         )}
         aria-hidden={!creating}
       >
-        <div className="mx-auto flex h-svh w-full max-w-md flex-col">
+        <div
+          className="mx-auto flex h-svh w-full max-w-md flex-col"
+          style={vpHeight ? { height: `${vpHeight}px` } : undefined}
+        >
           <header className="flex items-center gap-2 px-5 pt-5">
             <Button
               type="button"
@@ -394,9 +434,9 @@ export function AccountGate({ children }) {
                   <p className="text-sm text-muted-foreground">
                     Son los insumos o materiales que usás y su costo: shampoo, tinta, harina,
                     repuestos, telas. Sirven para saber tu rentabilidad en cada servicio. Cargá al
-                    menos uno para seguir (o generá ejemplos demo).
+                    menos uno para seguir (o cargá un ejemplo desde la lista).
                   </p>
-                  <EjemplosDialog topic="productos" />
+                  <EjemplosDialog topic="productos" onUsar={usar('productos')} />
                 </div>
 
                 <div className="space-y-3">
@@ -438,35 +478,16 @@ export function AccountGate({ children }) {
                   ))}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 gap-2"
-                    id="btn-agregar-producto"
-                    onClick={() => setProductos((l) => [...l, newProducto()])}
-                  >
-                    <Plus className="size-4" />
-                    Agregar producto
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-11 gap-2 text-muted-foreground"
-                    id="btn-productos-demo"
-                    onClick={() =>
-                      setProductos((l) => [
-                        ...l,
-                        { ...newProducto(), nombre: `Producto ${l.length + 1}` },
-                        { ...newProducto(), nombre: `Producto ${l.length + 2}` },
-                        { ...newProducto(), nombre: `Producto ${l.length + 3}` },
-                      ])
-                    }
-                  >
-                    <Sparkles className="size-4" />
-                    Generar productos demo
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-2"
+                  id="btn-agregar-producto"
+                  onClick={() => setProductos((l) => [...l, newProducto()])}
+                >
+                  <Plus className="size-4" />
+                  Agregar producto
+                </Button>
               </section>
 
               {/* Paso 3: servicios */}
@@ -479,10 +500,10 @@ export function AccountGate({ children }) {
                   <p className="text-sm text-muted-foreground">
                     Es lo que ofrecés y cobrás: "Limpieza básica", "Corte de pelo", "Sesión de
                     fotos", "Cambio de aceite", "Torta personalizada". Marcá qué productos consume
-                    cada uno para calcular su costo. Cargá al menos uno para seguir (o generá
-                    ejemplos demo).
+                    cada uno para calcular su costo. Cargá al menos uno para seguir (o cargá un
+                    ejemplo desde la lista).
                   </p>
-                  <EjemplosDialog topic="servicios" />
+                  <EjemplosDialog topic="servicios" onUsar={usar('servicios')} />
                 </div>
 
                 <div className="space-y-3">
@@ -561,34 +582,16 @@ export function AccountGate({ children }) {
                   })}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 gap-2"
-                    id="btn-agregar-servicio"
-                    onClick={() => setServicios((l) => [...l, newServicio()])}
-                  >
-                    <Plus className="size-4" />
-                    Agregar servicio
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-11 gap-2 text-muted-foreground"
-                    id="btn-servicios-demo"
-                    onClick={() =>
-                      setServicios((l) => [
-                        ...l,
-                        { ...newServicio(), titulo: `Servicio ${l.length + 1}` },
-                        { ...newServicio(), titulo: `Servicio ${l.length + 2}` },
-                      ])
-                    }
-                  >
-                    <Sparkles className="size-4" />
-                    Generar servicios demo
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-2"
+                  id="btn-agregar-servicio"
+                  onClick={() => setServicios((l) => [...l, newServicio()])}
+                >
+                  <Plus className="size-4" />
+                  Agregar servicio
+                </Button>
               </section>
 
               {/* Paso 4: categorías */}
@@ -604,7 +607,7 @@ export function AccountGate({ children }) {
                     "Interior", un gasista "Materiales" o "Mano de obra", una diseñadora "Diseño" o
                     "Impresión". Creá las tuyas y asigná abajo los servicios que hiciste.
                   </p>
-                  <EjemplosDialog topic="categorias" />
+                  <EjemplosDialog topic="categorias" onUsar={usar('categorias')} />
                 </div>
 
                 <div className="space-y-2">
@@ -640,34 +643,16 @@ export function AccountGate({ children }) {
                   ))}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-11 gap-2"
-                    id="btn-agregar-categoria"
-                    onClick={() => setCategorias((l) => [...l, newCategoria()])}
-                  >
-                    <Plus className="size-4" />
-                    Agregar categoría
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-11 gap-2 text-muted-foreground"
-                    id="btn-categorias-demo"
-                    onClick={() =>
-                      setCategorias((l) => [
-                        ...l,
-                        { ...newCategoria(), nombre: `Categoría ${l.length + 1}` },
-                        { ...newCategoria(), nombre: `Categoría ${l.length + 2}` },
-                      ])
-                    }
-                  >
-                    <Sparkles className="size-4" />
-                    Generar categorías demo
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-2"
+                  id="btn-agregar-categoria"
+                  onClick={() => setCategorias((l) => [...l, newCategoria()])}
+                >
+                  <Plus className="size-4" />
+                  Agregar categoría
+                </Button>
 
                 {/* Asignación de servicios a cada categoría */}
                 {(() => {
@@ -730,7 +715,7 @@ export function AccountGate({ children }) {
                     Agrupá servicios que solés vender juntos para precargarlos de un toque al armar
                     un presupuesto. Es opcional: si no creás ninguno, no pasa nada.
                   </p>
-                  <EjemplosDialog topic="paquetes" />
+                  <EjemplosDialog topic="paquetes" onUsar={usar('paquetes')} />
                 </div>
 
                 <div className="space-y-3">
@@ -833,7 +818,7 @@ export function AccountGate({ children }) {
                     chico, SUV, casa…). Es opcional: si no creás ninguno, el presupuesto no muestra
                     este paso.
                   </p>
-                  <EjemplosDialog topic="tipos-trabajo" />
+                  <EjemplosDialog topic="tipos-trabajo" onUsar={usar('tipos-trabajo')} />
                 </div>
 
                 <div className="space-y-3">

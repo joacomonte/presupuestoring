@@ -1,5 +1,7 @@
-import { Lightbulb } from 'lucide-react'
+import { useState } from 'react'
+import { Lightbulb, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogClose,
@@ -118,19 +120,30 @@ const EJEMPLOS = {
   },
 }
 
-export function EjemplosDialog({ topic, label = 'Ver ejemplos', variant = 'outline', className }) {
+export function EjemplosDialog({
+  topic,
+  label = 'Ver ejemplos',
+  variant = 'secondary',
+  className,
+  onUsar,
+}) {
+  const [open, setOpen] = useState(false)
   const data = EJEMPLOS[topic]
   if (!data) return null
 
+  const usar = (items) => {
+    onUsar?.(items)
+    setOpen(false)
+  }
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
           type="button"
           variant={variant}
-          size="sm"
           id={`ver-ejemplos-${topic}`}
-          className={className}
+          className={cn('w-full', className)}
         >
           <Lightbulb className="size-4" />
           {label}
@@ -152,6 +165,18 @@ export function EjemplosDialog({ topic, label = 'Ver ejemplos', variant = 'outli
                   <li key={it}>{it}</li>
                 ))}
               </ul>
+              {onUsar && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full gap-2"
+                  onClick={() => usar(r.items)}
+                >
+                  <Plus className="size-4" />
+                  Agregar estos como demo
+                </Button>
+              )}
             </div>
           ))}
         </div>
