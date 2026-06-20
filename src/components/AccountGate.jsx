@@ -12,13 +12,12 @@ import {
   Share2,
   Wrench,
   FolderTree,
-  Layers,
-  Gauge,
+  Sparkles,
   ChevronDown,
 } from 'lucide-react'
 import { AppLogo } from '@/components/AppLogo'
 import { MoneyInput } from '@/components/MoneyInput'
-import { MultiplicadorInput } from '@/components/MultiplicadorInput'
+import { OnboardingPreview } from '@/components/OnboardingPreview'
 import { EjemplosDialog } from '@/components/EjemplosDialog'
 import {
   Collapsible,
@@ -44,7 +43,11 @@ import { buildEmptyData } from '@/data/seed'
 import { uid } from '@/lib/id'
 import { cn } from '@/lib/utils'
 
-const STEPS = 6
+// Onboarding "preview-guiado": alterna pasos visuales (muestran un presupuesto de
+// ejemplo resaltando la capa que se va a crear) con pasos de edición (listas planas).
+//  1 nombre · 2 preview-secciones · 3 crear-secciones · 4 preview-servicios
+//  5 crear-servicios · 6 preview-productos · 7 crear-productos · 8 plantillas (maqueta)
+const STEPS = 8
 
 // Slug válido para user_id (/^[a-z0-9_-]{1,64}$/). Agrega sufijo corto para evitar colisiones.
 function slugFor(nombre) {
@@ -62,8 +65,6 @@ function slugFor(nombre) {
 const newProducto = () => ({ id: uid('prod'), nombre: '', costo: { valor: 0, moneda: 'ARS' } })
 const newServicio = () => ({ id: uid('item'), titulo: '', productoIds: [], categoriaId: null })
 const newCategoria = () => ({ id: uid('cat'), nombre: '' })
-const newCombo = () => ({ id: uid('paq'), nombre: '', itemIds: [] })
-const newTipoTrabajo = () => ({ id: uid('tt'), nombre: '', multiplicador: 1 })
 
 // Fila de cuenta con hold-to-delete sobre la propia tarjeta: un tap rápido entra
 // a la cuenta; al mantenerla presionada, la tarjeta se va llenando de destructivo
@@ -172,8 +173,6 @@ export function AccountGate() {
   const [productos, setProductos] = useState([])
   const [servicios, setServicios] = useState([])
   const [categorias, setCategorias] = useState([])
-  const [combos, setCombos] = useState([])
-  const [tiposTrabajo, setTiposTrabajo] = useState([])
   const [busy, setBusy] = useState(false)
   const [kbInset, setKbInset] = useState(0)
   const nombreRef = useRef(null)
@@ -223,8 +222,6 @@ export function AccountGate() {
     setProductos([])
     setServicios([])
     setCategorias([])
-    setCombos([])
-    setTiposTrabajo([])
     setStep(1)
     setCreating(true)
   }
@@ -240,25 +237,18 @@ export function AccountGate() {
       setServicios(items.map((t) => ({ ...newServicio(), titulo: t })))
     } else if (topic === 'categorias') {
       setCategorias(items.map((n) => ({ ...newCategoria(), nombre: n })))
-    } else if (topic === 'paquetes') {
-      setCombos(items.map((n) => ({ ...newCombo(), nombre: n })))
-    } else if (topic === 'tipos-trabajo') {
-      setTiposTrabajo(
-        items.map((s) => {
-          const [nom, mult] = s.split('×')
-          return { ...newTipoTrabajo(), nombre: nom.trim(), multiplicador: Number(mult) || 1 }
-        })
-      )
     }
   }
   const usar = (topic) => (items) => usarEjemplos(topic, items)
 
-  const hasProducto = productos.some((p) => p.nombre.trim())
+  const hasCategoria = categorias.some((c) => c.nombre.trim())
   const hasServicio = servicios.some((s) => s.titulo.trim())
+  // Solo los pasos de edición de secciones (3) y servicios (5) son obligatorios;
+  // los previews (2/4/6), productos (7) y plantillas (8) se pueden saltar.
   const nextDisabled =
     (step === 1 && !nombre.trim()) ||
-    (step === 2 && !hasProducto) ||
-    (step === 3 && !hasServicio)
+    (step === 3 && !hasCategoria) ||
+    (step === 5 && !hasServicio)
 
   const crear = async () => {
     const nom = nombre.trim()
@@ -285,23 +275,12 @@ export function AccountGate() {
           manoObra: { valor: 0, moneda: 'ARS' },
           opciones: [],
         }))
-      const itemIdsValidos = new Set(items.map((it) => it.id))
-      const paqs = combos
-        .filter((c) => c.nombre.trim())
-        .map((c) => ({
-          id: c.id,
-          nombre: c.nombre.trim(),
-          itemIds: c.itemIds.filter((id) => itemIdsValidos.has(id)),
-        }))
-      const tdt = tiposTrabajo
-        .filter((t) => t.nombre.trim())
-        .map((t) => ({
-          id: t.id,
-          nombre: t.nombre.trim(),
-          multiplicador: Number(t.multiplicador) || 1,
-        }))
+      // En el onboarding nuevo no se capturan plantillas (paquetes) ni tipos de
+      // trabajo: van vacíos y se configuran luego dentro de la app.
+      // TODO(plantillas): cuando el paso 8 deje de ser maqueta, sembrar acá los
+      // paquetes elegidos (y, si la plantilla los trae, también cats/items/prods).
       const id = slugFor(nom)
-      await createAccount(id, buildEmptyData(nom, prods, items, cats, paqs, tdt))
+      await createAccount(id, buildEmptyData(nom, prods, items, cats, [], []))
       setUser(id)
     } catch {
       setError(true)
@@ -452,7 +431,8 @@ export function AccountGate() {
                     <h2 className="text-2xl font-semibold tracking-tight">¿Cómo se llama tu negocio?</h2>
                     <p className="text-sm text-muted-foreground">
                       Es el nombre que va a figurar en tus presupuestos. En los próximos pasos
-                      cargamos tus productos y servicios — todo lo podés cambiar después.
+                      armamos juntos las secciones, los servicios y los productos — todo lo podés
+                      cambiar después.
                     </p>
                   </div>
                 </div>
@@ -469,17 +449,178 @@ export function AccountGate() {
                 </div>
               </section>
 
-              {/* Paso 2: productos */}
+              {/* Paso 2: preview — secciones */}
+              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
+                <div className="space-y-2">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <FolderTree className="size-6" />
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight">Así se ve un presupuesto</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Este es el diseño que va a recibir tu cliente. Se arma en capas y vamos a
+                    empezar por las <strong className="font-semibold text-foreground">secciones</strong>:
+                    los bloques en los que se ordena (Lavado, Interior, Tratamientos…). En el
+                    próximo paso las creás.
+                  </p>
+                </div>
+                <OnboardingPreview nombre={nombre} highlight="secciones" />
+              </section>
+
+              {/* Paso 3: crear secciones (lista plana) */}
+              <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
+                <div className="space-y-2">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <FolderTree className="size-6" />
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight">Creá tus secciones</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Son los bloques en los que se divide el presupuesto. Un detallador usa "Lavado"
+                    o "Interior", un gasista "Materiales" o "Mano de obra", una diseñadora "Diseño" o
+                    "Impresión". Creá al menos una (o cargá un ejemplo desde la lista).
+                  </p>
+                  <EjemplosDialog topic="categorias" label="Ver ejemplos" onUsar={usar('categorias')} />
+                </div>
+
+                <div className="space-y-2">
+                  {categorias.map((c, i) => (
+                    <div key={c.id} className="flex items-center gap-2">
+                      <Input
+                        aria-label={`Nombre de la sección ${i + 1}`}
+                        value={c.nombre}
+                        onChange={(e) =>
+                          setCategorias((list) =>
+                            list.map((x) => (x.id === c.id ? { ...x, nombre: e.target.value } : x))
+                          )
+                        }
+                        placeholder={`Sección ${i + 1}`}
+                        className="h-11 flex-1 text-base"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-11 shrink-0 text-muted-foreground hover:text-destructive"
+                        aria-label={`Quitar sección ${i + 1}`}
+                        onClick={() => setCategorias((list) => list.filter((x) => x.id !== c.id))}
+                      >
+                        <Trash2 className="size-5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-2"
+                  id="btn-agregar-categoria"
+                  onClick={() => setCategorias((l) => [...l, newCategoria()])}
+                >
+                  <Plus className="size-4" />
+                  Agregar sección
+                </Button>
+              </section>
+
+              {/* Paso 4: preview — servicios */}
+              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
+                <div className="space-y-2">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Wrench className="size-6" />
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight">Ahora, los servicios</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Dentro de cada sección van los{' '}
+                    <strong className="font-semibold text-foreground">servicios</strong>: lo que
+                    ofrecés y cobrás (Lavado simple, Corte de pelo, Cambio de aceite). Es lo que el
+                    cliente ve con su precio. En el próximo paso los creás.
+                  </p>
+                </div>
+                <OnboardingPreview nombre={nombre} highlight="servicios" />
+              </section>
+
+              {/* Paso 5: crear servicios (lista plana) */}
+              <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
+                <div className="space-y-2">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Wrench className="size-6" />
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight">Creá tus servicios</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Es lo que ofrecés y cobrás: "Lavado simple", "Corte de pelo", "Sesión de fotos",
+                    "Cambio de aceite". Creá al menos uno (o cargá un ejemplo). Después, dentro de la
+                    app, los asignás a cada sección y les ponés precio.
+                  </p>
+                  <EjemplosDialog topic="servicios" onUsar={usar('servicios')} />
+                </div>
+
+                <div className="space-y-2">
+                  {servicios.map((s, i) => (
+                    <div key={s.id} className="flex items-center gap-2">
+                      <Input
+                        aria-label={`Nombre del servicio ${i + 1}`}
+                        value={s.titulo}
+                        onChange={(e) =>
+                          setServicios((list) =>
+                            list.map((x) => (x.id === s.id ? { ...x, titulo: e.target.value } : x))
+                          )
+                        }
+                        placeholder={`Servicio ${i + 1}`}
+                        className="h-11 flex-1 text-base"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-11 shrink-0 text-muted-foreground hover:text-destructive"
+                        aria-label={`Quitar servicio ${i + 1}`}
+                        onClick={() => setServicios((list) => list.filter((x) => x.id !== s.id))}
+                      >
+                        <Trash2 className="size-5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 gap-2"
+                  id="btn-agregar-servicio"
+                  onClick={() => setServicios((l) => [...l, newServicio()])}
+                >
+                  <Plus className="size-4" />
+                  Agregar servicio
+                </Button>
+              </section>
+
+              {/* Paso 6: preview — productos */}
+              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
+                <div className="space-y-2">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Package className="size-6" />
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight">Por último, los productos</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Cada servicio puede usar{' '}
+                    <strong className="font-semibold text-foreground">productos</strong>: los
+                    insumos o materiales con su costo (shampoo, tinta, repuestos). Sirven para saber
+                    tu rentabilidad. En el próximo paso los creás.
+                  </p>
+                </div>
+                <OnboardingPreview nombre={nombre} highlight="productos" />
+              </section>
+
+              {/* Paso 7: crear productos (lista plana, con costo) */}
               <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
                 <div className="space-y-2">
                   <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <Package className="size-6" />
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Tus productos</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight">Creá tus productos</h2>
                   <p className="text-sm text-muted-foreground">
                     Son los insumos o materiales que usás y su costo: shampoo, tinta, harina,
-                    repuestos, telas. Sirven para saber tu rentabilidad en cada servicio. Cargá al
-                    menos uno para seguir (o cargá un ejemplo desde la lista).
+                    repuestos, telas. Es opcional: si no cargás ninguno, lo podés hacer después. Más
+                    adelante, dentro de la app, los asignás a cada servicio.
                   </p>
                   <EjemplosDialog topic="productos" onUsar={usar('productos')} />
                 </div>
@@ -535,389 +676,71 @@ export function AccountGate() {
                 </Button>
               </section>
 
-              {/* Paso 3: servicios */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
+              {/* Paso 8: plantillas — MAQUETA (sin lógica todavía)
+
+                  La idea final: packs de arranque por rubro que, con un toque, llenan
+                  de una todo el presupuesto (secciones + servicios + productos). Hoy
+                  esto es solo visual: las tarjetas no hacen nada (botón deshabilitado).
+
+                  TODO(implementar plantillas):
+                  1. Definir un catálogo de plantillas por rubro (cats/servicios/productos),
+                     idealmente reusando los rubros de EjemplosDialog (EJEMPLOS).
+                  2. Al tocar "Usar plantilla": setCategorias/setServicios/setProductos con
+                     el contenido del pack (mergeando o reemplazando lo cargado) y saltar a
+                     crear, o marcar el pack elegido y sembrarlo en crear() (ver TODO ahí).
+                  3. Decidir si la plantilla solo siembra el catálogo de la cuenta o además
+                     deja un "combo"/paquete reusable (paquetes en buildEmptyData). */}
+              <section className="flex h-full w-full shrink-0 flex-col gap-5 overflow-y-auto px-5 py-6">
                 <div className="space-y-2">
                   <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Wrench className="size-6" />
+                    <Sparkles className="size-6" />
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Tus servicios</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-semibold tracking-tight">Plantillas</h2>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      Próximamente
+                    </span>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    Es lo que ofrecés y cobrás: "Limpieza básica", "Corte de pelo", "Sesión de
-                    fotos", "Cambio de aceite", "Torta personalizada". Marcá qué productos consume
-                    cada uno para calcular su costo. Cargá al menos uno para seguir (o cargá un
-                    ejemplo desde la lista).
+                    Con un toque vas a poder armar todo un presupuesto listo para un rubro —
+                    secciones, servicios y productos incluidos. Pronto disponible; por ahora seguí
+                    y creá tu negocio.
                   </p>
-                  <EjemplosDialog topic="servicios" onUsar={usar('servicios')} />
                 </div>
 
                 <div className="space-y-3">
-                  {servicios.map((s, i) => {
-                    const conNombre = productos.filter((p) => p.nombre.trim())
-                    return (
-                      <div key={s.id} className="space-y-3 rounded-lg border p-3">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            aria-label={`Nombre del servicio ${i + 1}`}
-                            value={s.titulo}
-                            onChange={(e) =>
-                              setServicios((list) =>
-                                list.map((x) => (x.id === s.id ? { ...x, titulo: e.target.value } : x))
-                              )
-                            }
-                            placeholder={`Servicio ${i + 1}`}
-                            className="h-11 flex-1 text-base"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-11 shrink-0 text-muted-foreground hover:text-destructive"
-                            aria-label={`Quitar servicio ${i + 1}`}
-                            onClick={() => setServicios((list) => list.filter((x) => x.id !== s.id))}
-                          >
-                            <Trash2 className="size-5" />
-                          </Button>
-                        </div>
-
-                        {conNombre.length > 0 && (
-                          <div className="space-y-1.5">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              Productos utilizados en este servicio
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                              {conNombre.map((p) => {
-                                const on = s.productoIds.includes(p.id)
-                                return (
-                                  <button
-                                    key={p.id}
-                                    type="button"
-                                    aria-pressed={on}
-                                    onClick={() =>
-                                      setServicios((list) =>
-                                        list.map((x) =>
-                                          x.id === s.id
-                                            ? {
-                                                ...x,
-                                                productoIds: on
-                                                  ? x.productoIds.filter((id) => id !== p.id)
-                                                  : [...x.productoIds, p.id],
-                                              }
-                                            : x
-                                        )
-                                      )
-                                    }
-                                    className={cn(
-                                      'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition',
-                                      on
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'bg-background text-foreground hover:bg-accent'
-                                    )}
-                                  >
-                                    {on && <Check className="size-3.5" />}
-                                    {p.nombre.trim()}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
+                  {[
+                    {
+                      nombre: 'Lavado rápido — auto chico',
+                      incluye: 'Secciones Lavado exterior e Interior, servicios Lavado simple y Aspirado, con sus productos.',
+                    },
+                    {
+                      nombre: 'Detailing completo',
+                      incluye: 'Lavado, descontaminación, pulido y cerámico, con todos los insumos cargados.',
+                    },
+                    {
+                      nombre: 'Spa canino',
+                      incluye: 'Baño, corte y extras, con shampoo y acondicionador como productos.',
+                    },
+                  ].map((p) => (
+                    <div key={p.nombre} className="rounded-lg border bg-muted/30 p-3 opacity-70">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="size-4 shrink-0 text-primary" />
+                        <span className="text-sm font-semibold">{p.nombre}</span>
                       </div>
-                    )
-                  })}
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 gap-2"
-                  id="btn-agregar-servicio"
-                  onClick={() => setServicios((l) => [...l, newServicio()])}
-                >
-                  <Plus className="size-4" />
-                  Agregar servicio
-                </Button>
-              </section>
-
-              {/* Paso 4: categorías */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
-                <div className="space-y-2">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <FolderTree className="size-6" />
-                  </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Categorías</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Son las secciones en las que se va a dividir el presupuesto. Agrupan tus
-                    servicios para que el cliente lo lea ordenado: un detallador usa "Lavado" o
-                    "Interior", un gasista "Materiales" o "Mano de obra", una diseñadora "Diseño" o
-                    "Impresión". Creá las tuyas y asigná abajo los servicios que hiciste.
-                  </p>
-                  <EjemplosDialog topic="categorias" onUsar={usar('categorias')} />
-                </div>
-
-                <div className="space-y-2">
-                  {categorias.map((c, i) => (
-                    <div key={c.id} className="flex items-center gap-2">
-                      <Input
-                        aria-label={`Nombre de la categoría ${i + 1}`}
-                        value={c.nombre}
-                        onChange={(e) =>
-                          setCategorias((list) =>
-                            list.map((x) => (x.id === c.id ? { ...x, nombre: e.target.value } : x))
-                          )
-                        }
-                        placeholder={`Categoría ${i + 1}`}
-                        className="h-11 flex-1 text-base"
-                      />
+                      <p className="mt-1 text-xs text-muted-foreground">{p.incluye}</p>
                       <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-11 shrink-0 text-muted-foreground hover:text-destructive"
-                        aria-label={`Quitar categoría ${i + 1}`}
-                        onClick={() => {
-                          setCategorias((list) => list.filter((x) => x.id !== c.id))
-                          setServicios((list) =>
-                            list.map((s) => (s.categoriaId === c.id ? { ...s, categoriaId: null } : s))
-                          )
-                        }}
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="mt-3 w-full"
                       >
-                        <Trash2 className="size-5" />
+                        Usar plantilla
                       </Button>
                     </div>
                   ))}
                 </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 gap-2"
-                  id="btn-agregar-categoria"
-                  onClick={() => setCategorias((l) => [...l, newCategoria()])}
-                >
-                  <Plus className="size-4" />
-                  Agregar categoría
-                </Button>
-
-                {/* Asignación de servicios a cada categoría */}
-                {(() => {
-                  const cats = categorias.filter((c) => c.nombre.trim())
-                  const servs = servicios.filter((s) => s.titulo.trim())
-                  if (!cats.length || !servs.length) return null
-                  const setCat = (servId, catId) =>
-                    setServicios((list) =>
-                      list.map((s) =>
-                        s.id === servId
-                          ? { ...s, categoriaId: s.categoriaId === catId ? null : catId }
-                          : s
-                      )
-                    )
-                  return (
-                    <div className="space-y-4 border-t pt-4">
-                      <p className="text-sm font-medium">Asigná tus servicios</p>
-                      {cats.map((c) => (
-                        <div key={c.id} className="space-y-1.5">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {c.nombre.trim()}
-                          </span>
-                          <div className="flex flex-wrap gap-2">
-                            {servs.map((s) => {
-                              const on = s.categoriaId === c.id
-                              return (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  aria-pressed={on}
-                                  onClick={() => setCat(s.id, c.id)}
-                                  className={cn(
-                                    'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition',
-                                    on
-                                      ? 'border-primary bg-primary text-primary-foreground'
-                                      : 'bg-background text-foreground hover:bg-accent'
-                                  )}
-                                >
-                                  {on && <Check className="size-3.5" />}
-                                  {s.titulo.trim()}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </section>
-
-              {/* Paso 5: combos / paquetes */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
-                <div className="space-y-2">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Layers className="size-6" />
-                  </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Combos</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Pensalos como plantillas rápidas: agrupá servicios que solés vender juntos y
-                    cargalos de un toque al armar un presupuesto, en vez de sumarlos uno por uno. Es
-                    totalmente opcional —sirve para ahorrarte tiempo después—; si no creás ninguno,
-                    no pasa nada.
-                  </p>
-                  <EjemplosDialog topic="paquetes" onUsar={usar('paquetes')} />
-                </div>
-
-                <div className="space-y-3">
-                  {combos.map((c, i) => {
-                    const servs = servicios.filter((s) => s.titulo.trim())
-                    return (
-                      <div key={c.id} className="space-y-3 rounded-lg border p-3">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            aria-label={`Nombre del combo ${i + 1}`}
-                            value={c.nombre}
-                            onChange={(e) =>
-                              setCombos((list) =>
-                                list.map((x) => (x.id === c.id ? { ...x, nombre: e.target.value } : x))
-                              )
-                            }
-                            placeholder={`Combo ${i + 1}`}
-                            className="h-11 flex-1 text-base"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-11 shrink-0 text-muted-foreground hover:text-destructive"
-                            aria-label={`Quitar combo ${i + 1}`}
-                            onClick={() => setCombos((list) => list.filter((x) => x.id !== c.id))}
-                          >
-                            <Trash2 className="size-5" />
-                          </Button>
-                        </div>
-
-                        {servs.length > 0 && (
-                          <div className="space-y-1.5">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              Servicios incluidos en este combo
-                            </span>
-                            <div className="flex flex-wrap gap-2">
-                              {servs.map((s) => {
-                                const on = c.itemIds.includes(s.id)
-                                return (
-                                  <button
-                                    key={s.id}
-                                    type="button"
-                                    aria-pressed={on}
-                                    onClick={() =>
-                                      setCombos((list) =>
-                                        list.map((x) =>
-                                          x.id === c.id
-                                            ? {
-                                                ...x,
-                                                itemIds: on
-                                                  ? x.itemIds.filter((id) => id !== s.id)
-                                                  : [...x.itemIds, s.id],
-                                              }
-                                            : x
-                                        )
-                                      )
-                                    }
-                                    className={cn(
-                                      'inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition',
-                                      on
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'bg-background text-foreground hover:bg-accent'
-                                    )}
-                                  >
-                                    {on && <Check className="size-3.5" />}
-                                    {s.titulo.trim()}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 gap-2"
-                  id="btn-agregar-combo"
-                  onClick={() => setCombos((l) => [...l, newCombo()])}
-                >
-                  <Plus className="size-4" />
-                  Agregar combo
-                </Button>
-              </section>
-
-              {/* Paso 6: tipos de trabajo (multiplicador) */}
-              <section className="flex h-full w-full shrink-0 flex-col gap-4 overflow-y-auto px-5 py-6">
-                <div className="space-y-2">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Gauge className="size-6" />
-                  </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Tipo de trabajo</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Multiplican el total del presupuesto según el tamaño o la complejidad (auto
-                    chico, SUV, casa…). Es opcional: si no creás ninguno, el presupuesto no muestra
-                    este paso.
-                  </p>
-                  <EjemplosDialog topic="tipos-trabajo" onUsar={usar('tipos-trabajo')} />
-                </div>
-
-                <div className="space-y-3">
-                  {tiposTrabajo.map((t, i) => (
-                    <div key={t.id} className="space-y-3 rounded-lg border p-3">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          aria-label={`Nombre del tipo de trabajo ${i + 1}`}
-                          value={t.nombre}
-                          onChange={(e) =>
-                            setTiposTrabajo((list) =>
-                              list.map((x) => (x.id === t.id ? { ...x, nombre: e.target.value } : x))
-                            )
-                          }
-                          placeholder="Ej. SUV, Perro grande, Casa"
-                          className="h-11 flex-1 text-base"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-11 shrink-0 text-muted-foreground hover:text-destructive"
-                          aria-label={`Quitar tipo de trabajo ${i + 1}`}
-                          onClick={() =>
-                            setTiposTrabajo((list) => list.filter((x) => x.id !== t.id))
-                          }
-                        >
-                          <Trash2 className="size-5" />
-                        </Button>
-                      </div>
-                      <MultiplicadorInput
-                        value={t.multiplicador}
-                        onChange={(multiplicador) =>
-                          setTiposTrabajo((list) =>
-                            list.map((x) => (x.id === t.id ? { ...x, multiplicador } : x))
-                          )
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 gap-2"
-                  id="btn-agregar-tipo-trabajo"
-                  onClick={() => setTiposTrabajo((l) => [...l, newTipoTrabajo()])}
-                >
-                  <Plus className="size-4" />
-                  Agregar tipo de trabajo
-                </Button>
               </section>
             </div>
           </div>
