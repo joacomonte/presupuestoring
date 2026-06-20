@@ -22,6 +22,16 @@ import { EjemplosDialog } from '@/components/EjemplosDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useAccount } from '@/store/useAccount'
 import { listAccounts, createAccount, deleteAccount } from '@/lib/sync'
 import { buildEmptyData } from '@/data/seed'
@@ -73,6 +83,7 @@ function AccountRow({ account, onSelect, onDelete, deleting }) {
       if (p >= 1) {
         raf.current = 0
         done.current = true
+        setProgress(0)
         onDelete()
       } else {
         raf.current = requestAnimationFrame(tick)
@@ -141,11 +152,12 @@ function AccountRow({ account, onSelect, onDelete, deleting }) {
 
 // Pantalla de selección de cuenta (sin contraseña). Si no hay cuenta elegida,
 // se muestra antes de cargar la app; al elegir/crear una, se entra a esa cuenta.
-export function AccountGate({ children }) {
-  const { user, setUser } = useAccount()
+export function AccountGate() {
+  const setUser = useAccount((s) => s.setUser)
   const [accounts, setAccounts] = useState(null)
   const [error, setError] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [confirmAccount, setConfirmAccount] = useState(null) // cuenta pendiente de borrar
 
   // Wizard
   const [creating, setCreating] = useState(false)
@@ -169,8 +181,8 @@ export function AccountGate({ children }) {
   }
 
   useEffect(() => {
-    if (!user) load()
-  }, [user])
+    load()
+  }, [])
 
   // En mobile el teclado se superpone sobre el footer (en iOS el viewport de layout
   // no se achica). Medimos el alto del teclado con visualViewport y lo agregamos como
@@ -199,9 +211,6 @@ export function AccountGate({ children }) {
       return () => clearTimeout(t)
     }
   }, [creating, step])
-
-  // Al entrar, remontamos el árbol (key=user) para que DbSync recargue esa cuenta.
-  if (user) return <div key={user} className="contents">{children}</div>
 
   const openWizard = () => {
     setNombre('')
@@ -354,7 +363,7 @@ export function AccountGate({ children }) {
                 account={a}
                 deleting={deletingId === a.user_id}
                 onSelect={() => setUser(a.user_id)}
-                onDelete={() => deleteAccountNow(a)}
+                onDelete={() => setConfirmAccount(a)}
               />
             ))}
           </ul>
@@ -929,6 +938,38 @@ export function AccountGate({ children }) {
           </footer>
         </div>
       </div>
+
+      {/* Confirmación de borrado: el hold "arma" la acción y este diálogo la confirma. */}
+      <AlertDialog
+        open={!!confirmAccount}
+        onOpenChange={(open) => !open && setConfirmAccount(null)}
+      >
+        <AlertDialogContent id="dialog-borrar-cuenta">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Eliminar la cuenta {confirmAccount?.nombre || confirmAccount?.user_id}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borran todos sus datos (presupuestos, productos y ajustes). Esta
+              acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel id="btn-cancelar-borrar">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              id="btn-confirmar-borrar"
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => {
+                const a = confirmAccount
+                setConfirmAccount(null)
+                if (a) deleteAccountNow(a)
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
