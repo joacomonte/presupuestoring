@@ -123,7 +123,7 @@ const EJEMPLOS = {
 export function EjemplosDialog({
   topic,
   label = 'Ver ejemplos',
-  variant = 'secondary',
+  variant = 'outline',
   className,
   onUsar,
 }) {
@@ -142,8 +142,9 @@ export function EjemplosDialog({
         <Button
           type="button"
           variant={variant}
+          size="sm"
           id={`ver-ejemplos-${topic}`}
-          className={cn('w-full', className)}
+          className={cn('text-muted-foreground', className)}
         >
           <Lightbulb className="size-4" />
           {label}

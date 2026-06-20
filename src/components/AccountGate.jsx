@@ -8,6 +8,8 @@ import {
   Trash2,
   Check,
   Package,
+  FileText,
+  Share2,
   Wrench,
   FolderTree,
   Layers,
@@ -155,7 +157,7 @@ export function AccountGate({ children }) {
   const [combos, setCombos] = useState([])
   const [tiposTrabajo, setTiposTrabajo] = useState([])
   const [busy, setBusy] = useState(false)
-  const [vpHeight, setVpHeight] = useState(null)
+  const [kbInset, setKbInset] = useState(0)
   const nombreRef = useRef(null)
 
   const load = () => {
@@ -171,18 +173,23 @@ export function AccountGate({ children }) {
   }, [user])
 
   // En mobile el teclado se superpone sobre el footer (en iOS el viewport de layout
-  // no se achica). Seguimos visualViewport para que el wizard mida exactamente el
-  // alto visible y el botón de continuar quede siempre por encima del teclado.
+  // no se achica). Medimos el alto del teclado con visualViewport y lo agregamos como
+  // padding inferior al footer, así el botón de continuar sube por encima del teclado
+  // sin tocar el alto del wizard (que sigue siendo el de la pantalla completa).
   useEffect(() => {
     if (!creating) return
     const vv = window.visualViewport
     if (!vv) return
-    const onResize = () => setVpHeight(vv.height)
-    onResize()
-    vv.addEventListener('resize', onResize)
+    const update = () => {
+      setKbInset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop))
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
     return () => {
-      vv.removeEventListener('resize', onResize)
-      setVpHeight(null)
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      setKbInset(0)
     }
   }, [creating])
 
@@ -306,8 +313,26 @@ export function AccountGate({ children }) {
         <div className="flex flex-col items-center gap-3 text-center">
           <AppLogo className="size-20" />
           <h1 className="text-xl font-semibold tracking-tight">Presupuestoring</h1>
-          <p className="text-sm text-muted-foreground">Elegí una cuenta para entrar.</p>
+          <p className="text-sm text-muted-foreground">
+            Armá presupuestos profesionales para tu negocio y compartilos con tus clientes en
+            minutos.
+          </p>
         </div>
+
+        <ul className="space-y-2.5">
+          {[
+            { icon: Package, text: 'Cargá tus productos y servicios' },
+            { icon: FileText, text: 'Armá presupuestos en minutos' },
+            { icon: Share2, text: 'Compartilos con tus clientes' },
+          ].map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icon className="size-[1.15rem]" />
+              </span>
+              <span className="text-sm">{text}</span>
+            </li>
+          ))}
+        </ul>
 
         {accounts === null && !error && (
           <div className="flex justify-center py-4">
@@ -361,10 +386,7 @@ export function AccountGate({ children }) {
         )}
         aria-hidden={!creating}
       >
-        <div
-          className="mx-auto flex h-svh w-full max-w-md flex-col"
-          style={vpHeight ? { height: `${vpHeight}px` } : undefined}
-        >
+        <div className="mx-auto flex h-svh w-full max-w-md flex-col">
           <header className="flex items-center gap-2 px-5 pt-5">
             <Button
               type="button"
@@ -875,7 +897,10 @@ export function AccountGate({ children }) {
             </div>
           </div>
 
-          <footer className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+          <footer
+            className="px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3"
+            style={kbInset ? { paddingBottom: kbInset } : undefined}
+          >
             {step < STEPS ? (
               <Button
                 type="button"
