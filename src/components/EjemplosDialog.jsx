@@ -2,8 +2,10 @@ import { Lightbulb } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -142,8 +144,10 @@ export function EjemplosDialog({ topic, label = 'Ver ejemplos', variant = 'outli
         <div className="space-y-4">
           {data.rubros.map((r) => (
             <div key={r.nombre} className="rounded-lg border bg-muted/40 p-3">
-              <div className="mb-1.5 text-sm font-semibold">{r.nombre}</div>
-              <ul className="space-y-0.5 text-sm text-muted-foreground">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {r.nombre}
+              </div>
+              <ul className="space-y-1 text-sm font-medium text-foreground">
                 {r.items.map((it) => (
                   <li key={it}>{it}</li>
                 ))}
@@ -151,6 +155,13 @@ export function EjemplosDialog({ topic, label = 'Ver ejemplos', variant = 'outli
             </div>
           ))}
         </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" id={`cerrar-ejemplos-${topic}`} className="w-full" size="lg">
+              Cerrar
+            </Button>
+          </DialogClose>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
