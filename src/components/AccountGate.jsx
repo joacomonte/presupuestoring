@@ -757,8 +757,12 @@ export function AccountGate() {
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">Creá tus productos</h2>
                   <p className="text-base text-foreground">
-                    Los insumos o materiales que usás y su costo: shampoo, tinta, repuestos. Es
-                    opcional.
+                    Los insumos o materiales que usás y <strong>cuánto te cuestan</strong> (no el
+                    precio de venta): shampoo, tinta, repuestos.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Estos costos son solo para tu análisis interno de rentabilidad: no se muestran
+                    en el presupuesto. El monto es opcional, lo podés cargar después.
                   </p>
                 </div>
 

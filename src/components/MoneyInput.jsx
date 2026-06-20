@@ -1,6 +1,21 @@
 import { useState } from 'react'
+import { ArrowLeftRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
+
+// Formatea lo que el usuario tipea a es-AR en vivo: miles con punto, coma decimal,
+// máximo 2 decimales. Devuelve { display, valor }.
+function formatDraft(raw) {
+  let s = raw.replace(/[^\d,]/g, '')
+  const comma = s.indexOf(',')
+  let int = comma === -1 ? s : s.slice(0, comma)
+  let dec = comma === -1 ? null : s.slice(comma + 1).replace(/,/g, '').slice(0, 2)
+  int = int.replace(/\D/g, '')
+  const intFmt = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  const display = intFmt + (comma !== -1 ? ',' + dec : '')
+  const num = int === '' && (dec === null || dec === '') ? 0 : Number(`${int || '0'}.${dec || '0'}`)
+  return { display, valor: Number.isNaN(num) ? 0 : num }
+}
 
 // Input de importe con toggle de moneda ARS/USD (PRD §3.3 "toggle por precio").
 // value = { valor, moneda }
@@ -32,15 +47,18 @@ export function MoneyInput({
       <button
         type="button"
         disabled={!allowCurrencyToggle}
+        title={allowCurrencyToggle ? `Cambiar a ${money.moneda === 'ARS' ? 'USD' : 'ARS'}` : undefined}
+        aria-label={allowCurrencyToggle ? `Moneda ${money.moneda}, tocá para cambiar` : `Moneda ${money.moneda}`}
         onClick={() =>
           onChange({ ...money, moneda: money.moneda === 'ARS' ? 'USD' : 'ARS' })
         }
         className={cn(
-          'flex w-12 shrink-0 items-center justify-center rounded-l-md border border-r-0 bg-secondary text-xs font-semibold text-secondary-foreground transition hover:bg-accent disabled:opacity-100',
+          'flex w-14 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-l-md border border-r-0 bg-secondary text-xs font-semibold text-secondary-foreground transition hover:bg-accent active:scale-[0.97] disabled:opacity-100',
           !allowCurrencyToggle && 'cursor-default hover:bg-secondary'
         )}
       >
-        {money.moneda}
+        <span>{money.moneda}</span>
+        {allowCurrencyToggle && <ArrowLeftRight className="size-3 text-muted-foreground" />}
       </button>
       <div className="relative flex-1">
         <Input
@@ -50,15 +68,13 @@ export function MoneyInput({
           value={focused ? draft : formatted}
           onFocus={() => {
             setFocused(true)
-            setDraft(money.valor === 0 ? '' : String(money.valor).replace('.', ','))
+            setDraft(money.valor === 0 ? '' : formatDraft(String(money.valor).replace('.', ',')).display)
           }}
           onBlur={() => setFocused(false)}
           onChange={(e) => {
-            const raw = e.target.value
-            setDraft(raw)
-            const normalized = raw.replace(/\./g, '').replace(',', '.')
-            const num = normalized === '' ? 0 : Number(normalized)
-            if (!Number.isNaN(num)) onChange({ ...money, valor: num })
+            const { display, valor } = formatDraft(e.target.value)
+            setDraft(display)
+            onChange({ ...money, valor })
           }}
           placeholder={placeholder}
           className="h-full rounded-l-none pr-10"
